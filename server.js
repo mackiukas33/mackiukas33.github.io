@@ -15,7 +15,7 @@ const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI;
 
 // In-memory state store
-const stateStore = new Set();
+// const stateStore = new Set();
 
 // Serve static photos
 app.use(express.static('public'));
@@ -95,9 +95,9 @@ app.get('/callback', async (req, res) => {
   const { code, state } = req.query;
 
   if (!code || !state) return res.status(400).send('Missing code or state');
-  if (!stateStore.has(state)) return res.status(403).send('Invalid state');
+  // if (!stateStore.has(state)) return res.status(403).send('Invalid state');
 
-  stateStore.delete(state);
+  // stateStore.delete(state);
 
   try {
     // Exchange code for access token (sandbox)
