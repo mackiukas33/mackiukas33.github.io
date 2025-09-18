@@ -114,12 +114,15 @@ app.get('/callback', async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    const accessToken = tokenRes.data.data.access_token;
-    res.json({
-      message: 'Login successful (sandbox)',
-      accessToken,
-      info: tokenRes.data,
-    });
+    console.log(tokenRes);
+    res.json(tokenRes);
+
+    // const accessToken = tokenRes.data.data.access_token;
+    // res.json({
+    //   message: 'Login successful (sandbox)',
+    //   accessToken,
+    //   info: tokenRes.data,
+    // });
 
     // Optional: call postCarousel automatically here
     // await postCarousel(accessToken);
