@@ -40,7 +40,7 @@ app.get('/login', (req, res) => {
         <form id="tiktokLogin" action="https://www.tiktok.com/v2/auth/authorize/" method="POST">
           <input type="hidden" name="client_key" value="${CLIENT_KEY}"/>
           <input type="hidden" name="response_type" value="code"/>
-          <input type="hidden" name="scope" value="user.info.basic,video.upload,video.publish"/>
+          <input type="hidden" name="scope" value="user.info.basic"/>
           <input type="hidden" name="redirect_uri" value="${REDIRECT_URI}"/>
           <input type="hidden" name="state" value="${state}"/>
         </form>
