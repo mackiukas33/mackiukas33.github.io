@@ -1,8 +1,9 @@
 import express from 'express';
 import axios from 'axios';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import qs from 'qs';
+
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -102,14 +103,14 @@ app.get('/callback', async (req, res) => {
   try {
     // Exchange code for access token (sandbox)
     const tokenRes = await axios.post(
-      'https://open.tiktokapis.com/v2/oauth/token/',
-      {
+      'https://open.tiktokapis.com/v2/oauth/token',
+      qs.stringify({
         client_key: CLIENT_KEY,
         client_secret: CLIENT_SECRET,
         code,
         grant_type: 'authorization_code',
         redirect_uri: REDIRECT_URI,
-      },
+      }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
