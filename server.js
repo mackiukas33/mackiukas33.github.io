@@ -104,13 +104,13 @@ app.get('/callback', async (req, res) => {
     // Exchange code for access token (sandbox)
     const tokenRes = await axios.post(
       'https://open.tiktokapis.com/v2/oauth/token',
-      qs.stringify({
+      {
         client_key: CLIENT_KEY,
         client_secret: CLIENT_SECRET,
         code,
         grant_type: 'authorization_code',
         redirect_uri: REDIRECT_URI,
-      }),
+      },
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
