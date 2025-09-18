@@ -110,7 +110,7 @@ app.get('/callback', async (req, res) => {
         grant_type: 'authorization_code',
         redirect_uri: REDIRECT_URI,
       },
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
     const accessToken = tokenRes.data.data.access_token;
