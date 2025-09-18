@@ -30,28 +30,46 @@ app.get('/', (req, res) => {
 // -------------------
 // /login route
 // -------------------
+// app.get('/login', (req, res) => {
+//   const state = crypto.randomBytes(16).toString('hex');
+//   stateStore.add(state);
+
+//   const formHtml = `
+//     <html>
+//       <body>
+//         <form id="tiktokLogin" action="https://www.tiktok.com/v2/auth/authorize/" method="POST">
+//           <input type="hidden" name="client_key" value="${CLIENT_KEY}"/>
+//           <input type="hidden" name="response_type" value="code"/>
+//           <input type="hidden" name="scope" value="user.info.basic"/>
+//           <input type="hidden" name="redirect_uri" value="${REDIRECT_URI}"/>
+//           <input type="hidden" name="state" value="${state}"/>
+//         </form>
+//         <script>
+//           document.getElementById('tiktokLogin').submit();
+//         </script>
+//       </body>
+//     </html>
+//   `;
+
+//   res.send(formHtml);
+// });
+
 app.get('/login', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   stateStore.add(state);
 
-  const formHtml = `
-    <html>
-      <body>
-        <form id="tiktokLogin" action="https://www.tiktok.com/v2/auth/authorize/" method="POST">
-          <input type="hidden" name="client_key" value="${CLIENT_KEY}"/>
-          <input type="hidden" name="response_type" value="code"/>
-          <input type="hidden" name="scope" value="user.info.basic"/>
-          <input type="hidden" name="redirect_uri" value="${REDIRECT_URI}"/>
-          <input type="hidden" name="state" value="${state}"/>
-        </form>
-        <script>
-          document.getElementById('tiktokLogin').submit();
-        </script>
-      </body>
-    </html>
-  `;
+  const params = new URLSearchParams({
+    client_key: CLIENT_KEY,
+    response_type: 'code',
+    scope: 'user.info.basic',
+    redirect_uri: REDIRECT_URI,
+    state: state,
+  });
 
-  res.send(formHtml);
+  // Redirect user to TikTok login page
+  res.redirect(
+    `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
+  );
 });
 
 // -------------------
