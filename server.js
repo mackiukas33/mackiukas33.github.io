@@ -54,22 +54,38 @@ app.get('/', (req, res) => {
 //   res.send(formHtml);
 // });
 
+// app.get('/login', (req, res) => {
+//   const state = crypto.randomBytes(16).toString('hex');
+//   stateStore.add(state);
+
+//   const params = new URLSearchParams({
+//     client_key: CLIENT_KEY,
+//     response_type: 'code',
+//     scope: 'user.info.basic',
+//     redirect_uri: REDIRECT_URI,
+//     state: state,
+//   });
+
+//   // Redirect user to TikTok login page
+//   res.redirect(
+//     `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
+//   );
+// });
+
 app.get('/login', (req, res) => {
-  const state = crypto.randomBytes(16).toString('hex');
-  stateStore.add(state);
+  const csrfState = Math.random().toString(36).substring(2);
+  res.cookie('csrfState', csrfState, { maxAge: 60000 });
 
-  const params = new URLSearchParams({
-    client_key: CLIENT_KEY,
-    response_type: 'code',
-    scope: 'user.info.basic',
-    redirect_uri: REDIRECT_URI,
-    state: state,
-  });
+  let url = 'https://www.tiktok.com/v2/auth/authorize/';
 
-  // Redirect user to TikTok login page
-  res.redirect(
-    `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
-  );
+  // the following params need to be in `application/x-www-form-urlencoded` format.
+  url += `?client_key=${CLIENT_KEY}`;
+  url += '&scope=user.info.basic';
+  url += '&response_type=code';
+  url += `&redirect_uri=${REDIRECT_URI}`;
+  url += '&state=' + csrfState;
+
+  res.redirect(url);
 });
 
 // -------------------
