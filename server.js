@@ -20,6 +20,13 @@ const stateStore = new Set();
 // Serve static photos
 app.use(express.static('public'));
 
+app.get('/', (req, res) => {
+  res.send(`
+    <h1>TTPhotos Sandbox App</h1>
+    <p>Click <a href="/login">here</a> to log in with TikTok sandbox.</p>
+  `);
+});
+
 // -------------------
 // /login route
 // -------------------
