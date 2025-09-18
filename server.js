@@ -124,7 +124,7 @@ app.get('/callback', async (req, res) => {
     // await postCarousel(accessToken);
   } catch (err) {
     console.error(err.response?.data || err.message);
-    res.status(500).send('Failed to exchange code for token');
+    res.status(500).send(err);
   }
 });
 
