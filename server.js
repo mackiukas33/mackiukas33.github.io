@@ -188,22 +188,32 @@ async function postCarousel(accessToken) {
 // -------------------
 // Dynamic slide renderer
 // -------------------
-function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, options = {}) {
   const words = text.split(/\s+/);
   let line = '';
   let cursorY = y;
+  const align = options.align || 'left'; // 'left' | 'center'
+  const doStroke = options.stroke === true;
   for (let i = 0; i < words.length; i++) {
     const testLine = line.length ? line + ' ' + words[i] : words[i];
     const metrics = ctx.measureText(testLine);
     if (metrics.width > maxWidth && i > 0) {
-      ctx.fillText(line, x, cursorY);
+      const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
+      const drawX = align === 'center' ? x - renderWidth / 2 : x;
+      if (doStroke) ctx.strokeText(line, drawX, cursorY);
+      ctx.fillText(line, drawX, cursorY);
       line = words[i];
       cursorY += lineHeight;
     } else {
       line = testLine;
     }
   }
-  if (line) ctx.fillText(line, x, cursorY);
+  if (line) {
+    const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
+    const drawX = align === 'center' ? x - renderWidth / 2 : x;
+    if (doStroke) ctx.strokeText(line, drawX, cursorY);
+    ctx.fillText(line, drawX, cursorY);
+  }
 }
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -299,12 +309,12 @@ app.get('/slide', async (req, res) => {
     let body = '';
 
     if (variant === 'intro') {
-      title = "It's just a song..";
+      title = "It's Just A Song..";
     } else if (variant === 'song') {
-      title = 'the song:';
-      body = song;
+      title = 'The Song:';
+      body = '';
     } else if (variant === 'lyrics') {
-      title = 'lyrics';
+      title = 'Lyrics';
       body = lyrics;
     } else {
       title = 'TTPhotos';
@@ -313,36 +323,26 @@ app.get('/slide', async (req, res) => {
     const margin = 80;
     const maxTextWidth = width - margin * 2;
 
-    // Draw title (centered)
+    // Draw title (centered). Slightly smaller, with outline
     ctx.font = GlobalFonts.has('InterBold')
-      ? '108px InterBold'
-      : 'bold 108px sans-serif';
+      ? '96px InterBold'
+      : 'bold 96px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
-    const titleY = 220;
+    let titleY = 220;
+    if (variant === 'intro' || variant === 'song') {
+      titleY = Math.floor((height - 96) / 2);
+    }
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeText(title, titleX, titleY);
     ctx.fillText(title, titleX, titleY);
 
     // Draw body/wrapped lyrics
     if (body) {
-      if (variant === 'song') {
-        // Emphasize song name
-        ctx.font = GlobalFonts.has('InterBold')
-          ? '88px InterBold'
-          : 'bold 88px sans-serif';
-        ctx.fillStyle = '#FFCC00';
-        const startY = titleY + 180;
-        const songLineHeight = 100;
-        drawWrappedText(
-          ctx,
-          body,
-          margin,
-          startY,
-          maxTextWidth,
-          songLineHeight
-        );
-        ctx.fillStyle = '#FFFFFF';
-      } else if (variant === 'lyrics') {
+      if (variant === 'lyrics') {
         // Lyrics panel
         const panelX = margin;
         const panelY = titleY + 160;
@@ -355,9 +355,11 @@ app.get('/slide', async (req, res) => {
         ctx.globalAlpha = 1;
 
         // Lyrics text
-        ctx.font = GlobalFonts.has('Inter') ? '64px Inter' : '64px sans-serif';
+        ctx.font = GlobalFonts.has('Inter') ? '52px Inter' : '52px sans-serif';
         ctx.fillStyle = '#FFFFFF';
-        const lineHeight = 78;
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#000000';
+        const lineHeight = 66;
         const innerPad = 40;
         drawWrappedText(
           ctx,
@@ -365,16 +367,20 @@ app.get('/slide', async (req, res) => {
           panelX + innerPad,
           panelY + innerPad,
           panelW - innerPad * 2,
-          lineHeight
+          lineHeight,
+          { align: 'left', stroke: true }
         );
       }
     }
 
     // Footer CTA
-    ctx.font = GlobalFonts.has('Inter') ? '48px Inter' : '48px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = GlobalFonts.has('Inter') ? '44px Inter' : '44px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
-    ctx.fillText('Tap to listen and follow for more', width / 2, height - 160);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText('Follow for more underrated gems', width / 2, height - 160);
+    ctx.fillText('Follow for more underrated gems', width / 2, height - 160);
     ctx.textAlign = 'left';
 
     res.set('Content-Type', 'image/png');
