@@ -210,7 +210,7 @@ async function postCarousel(accessToken) {
   ];
   const payload = {
     media_type: 'PHOTO',
-    post_mode: 'DIRECT_POST', // or keep 'DIRECT_POST'
+    post_mode: 'MEDIA_UPLOAD', // or keep 'DIRECT_POST'
     post_info: {
       title: 'Test',
       description: `🎵 ${song.name}\n#ttphotos`,
