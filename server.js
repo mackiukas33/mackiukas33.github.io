@@ -269,6 +269,28 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Measure-only: wrap text into lines to fit maxWidth, preserving newlines
+function computeWrappedLines(ctx, text, maxWidth) {
+  const paragraphs = String(text).split(/\r?\n/);
+  const lines = [];
+  for (let p = 0; p < paragraphs.length; p++) {
+    const words = paragraphs[p].split(/\s+/);
+    let line = '';
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line.length ? line + ' ' + words[i] : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        lines.push(line);
+        line = words[i];
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
 app.get('/slide', async (req, res) => {
   try {
     const variant = String(req.query.variant || 'intro');
@@ -400,33 +422,37 @@ app.get('/slide', async (req, res) => {
     // Draw body/wrapped lyrics
     if (body) {
       if (variant === 'lyrics') {
-        // Lyrics panel
+        // Lyrics panel: center text within a fitted shadow box
         const panelX = margin;
-        const panelY = titleY + 160;
         const panelW = width - margin * 2;
-        const panelH = height - panelY - 240;
+        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
+        const lineHeight = 46;
+        const innerPad = 40;
+        const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
+        const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
+        const panelH = totalHeight + innerPad * 2;
+        const panelY = Math.max(0, Math.floor((height - panelH) / 2));
+
+        // Draw shadow box
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#000000';
         drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Lyrics text (reduced ~30%)
-        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
+        // Draw centered lyrics
         ctx.fillStyle = '#FFFFFF';
         ctx.lineWidth = 6;
         ctx.strokeStyle = '#000000';
-        const lineHeight = 46;
-        const innerPad = 40;
-        drawWrappedText(
-          ctx,
-          body,
-          panelX + innerPad,
-          panelY + innerPad,
-          panelW - innerPad * 2,
-          lineHeight,
-          { align: 'left', stroke: true }
-        );
+        ctx.textAlign = 'center';
+        const startY = panelY + Math.floor((panelH - totalHeight) / 2);
+        const centerX = panelX + Math.floor(panelW / 2);
+        for (let i = 0; i < lines.length; i++) {
+          const y = startY + i * lineHeight;
+          ctx.strokeText(lines[i], centerX, y);
+          ctx.fillText(lines[i], centerX, y);
+        }
+        ctx.textAlign = 'left';
       }
     }
 
