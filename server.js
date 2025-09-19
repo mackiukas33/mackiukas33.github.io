@@ -45,10 +45,24 @@ try {
 }
 
 app.get('/', (req, res) => {
-  res.send(`
-    <h1>TTPhotos Sandbox App</h1>
-    <p>Click <a href="/login">here</a> to log in with TikTok sandbox.</p>
-  `);
+  res.sendFile(path.join(process.cwd(), 'index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'dashboard.html'));
+});
+
+app.post('/upload', async (req, res) => {
+  try {
+    if (!lastAccessToken) {
+      return res.status(400).json({ error: 'Not logged in' });
+    }
+
+    const result = await postCarousel(lastAccessToken);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/login', (req, res) => {
@@ -119,12 +133,8 @@ app.get('/callback', async (req, res) => {
       statusChecks.push({ error: e.response?.data || { message: e.message } });
     }
 
-    res.json({
-      token: tokenRes.data,
-      publish_api: publish.api,
-      slide_urls: publish.imageUrls,
-      status_checks: statusChecks,
-    });
+    // Redirect to dashboard after successful login
+    res.redirect('/dashboard?success=true');
   } catch (err) {
     console.error(
       'Token error:',
