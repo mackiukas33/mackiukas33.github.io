@@ -5,7 +5,7 @@ import path from 'path';
 import qs from 'qs';
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import { getRandomHashtags, getRandomTitle } from './public/data/hashtags.js';
-import { songs } from './public/data/songs';
+import { songs } from './public/data/songs.js';
 
 import dotenv from 'dotenv';
 
