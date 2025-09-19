@@ -77,16 +77,16 @@ app.get('/login', (req, res) => {
   const csrfState = Math.random().toString(36).substring(2);
   res.cookie('csrfState', csrfState, { maxAge: 60000 });
 
-  let url = 'https://www.tiktok.com/v2/auth/authorize/';
-
-  // the following params need to be in `application/x-www-form-urlencoded` format.
-  url += `?client_key=${CLIENT_KEY}`;
-  url += '&scope=user.info.basic';
-  url += '&response_type=code';
-  url += `&redirect_uri=${REDIRECT_URI}`;
-  url += '&state=' + csrfState;
-
-  res.redirect(url);
+  const params = new URLSearchParams({
+    client_key: CLIENT_KEY,
+    response_type: 'code',
+    scope: 'user.info.basic',
+    redirect_uri: REDIRECT_URI, // URLSearchParams will encode correctly
+    state: csrfState,
+  });
+  res.redirect(
+    `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
+  );
 });
 
 // -------------------
