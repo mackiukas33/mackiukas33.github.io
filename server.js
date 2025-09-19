@@ -113,7 +113,7 @@ const songs = [
   {
     id: 'MUSIC_ID_1',
     name: 'prod.push, Poley More - MORE TME',
-    lyrics: `And I already heard what you said already,
+    lyrics: `And I already heard what you said already, 
 You ain't even pause already
 Late night talks already...
 Troubles got u on, don't know where to go
@@ -218,30 +218,38 @@ async function postCarousel(accessToken) {
 // Dynamic slide renderer
 // -------------------
 function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, options = {}) {
-  const words = text.split(/\s+/);
-  let line = '';
+  const paragraphs = String(text).split(/\r?\n/);
   let cursorY = y;
   const align = options.align || 'left'; // 'left' | 'center'
   const doStroke = options.stroke === true;
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line.length ? line + ' ' + words[i] : words[i];
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && i > 0) {
+
+  for (let p = 0; p < paragraphs.length; p++) {
+    const words = paragraphs[p].split(/\s+/);
+    let line = '';
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line.length ? line + ' ' + words[i] : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
+        const drawX = align === 'center' ? x - renderWidth / 2 : x;
+        if (doStroke) ctx.strokeText(line, drawX, cursorY);
+        ctx.fillText(line, drawX, cursorY);
+        line = words[i];
+        cursorY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) {
       const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
       const drawX = align === 'center' ? x - renderWidth / 2 : x;
       if (doStroke) ctx.strokeText(line, drawX, cursorY);
       ctx.fillText(line, drawX, cursorY);
-      line = words[i];
-      cursorY += lineHeight;
-    } else {
-      line = testLine;
     }
-  }
-  if (line) {
-    const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
-    const drawX = align === 'center' ? x - renderWidth / 2 : x;
-    if (doStroke) ctx.strokeText(line, drawX, cursorY);
-    ctx.fillText(line, drawX, cursorY);
+    // Extra advance between paragraphs except after last
+    if (p < paragraphs.length - 1) {
+      cursorY += lineHeight;
+    }
   }
   return cursorY; // last baseline used
 }
