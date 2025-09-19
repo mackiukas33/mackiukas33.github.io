@@ -126,8 +126,12 @@ app.get('/callback', async (req, res) => {
     // Optional: call postCarousel automatically here
     // await postCarousel(accessToken);
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send(err);
+    console.error(
+      'Token error:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+    res.status(500).json(err.response?.data || { error: err.message });
   }
 });
 
