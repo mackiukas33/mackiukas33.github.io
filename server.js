@@ -240,11 +240,14 @@ async function postCarousel(accessToken) {
 // Publish status check
 // -------------------
 async function getPublishStatus(accessToken, publishId) {
-  const resp = await axios.get(
-    'https://open.tiktokapis.com/v2/post/publish/status/',
+  const resp = await axios.post(
+    'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
+    { publish_id: publishId },
     {
-      params: { publish_id: publishId },
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
     }
   );
   return resp.data;
