@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
+let lastAccessToken = null; // store latest token in-memory for status checks
 
 // TikTok sandbox credentials
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -90,6 +91,7 @@ app.get('/callback', async (req, res) => {
 
     // res.json(tokenRes.data);
     const accessToken = tokenRes.data.access_token;
+    lastAccessToken = accessToken;
     const publish = await postCarousel(accessToken);
     res.json({
       token: tokenRes.data,
@@ -208,6 +210,41 @@ async function postCarousel(accessToken) {
   );
   return { api: resp.data, imageUrls };
 }
+
+// -------------------
+// Publish status check
+// -------------------
+async function getPublishStatus(accessToken, publishId) {
+  const resp = await axios.get(
+    'https://open.tiktokapis.com/v2/post/publish/status/',
+    {
+      params: { publish_id: publishId },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+  return resp.data;
+}
+
+// GET /publish-status?publish_id=...
+app.get('/publish-status', async (req, res) => {
+  try {
+    const publishId = String(req.query.publish_id || '');
+    const token =
+      (typeof req.query.access_token === 'string' && req.query.access_token) ||
+      lastAccessToken;
+    if (!publishId)
+      return res.status(400).json({ error: 'missing publish_id' });
+    if (!token)
+      return res
+        .status(400)
+        .json({ error: 'missing access_token (none stored yet)' });
+    const data = await getPublishStatus(token, publishId);
+    res.json(data);
+  } catch (e) {
+    console.error('status error', e.response?.data || e.message);
+    res.status(500).json(e.response?.data || { error: e.message });
+  }
+});
 
 // -------------------
 // Dynamic slide renderer
