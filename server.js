@@ -113,17 +113,46 @@ const songs = [
   {
     id: 'MUSIC_ID_1',
     name: 'prod.push, Poley More - MORE TME',
-    lyrics: 'And I already heard what you said already...',
+    lyrics: `And I already heard what you said already,
+You ain't even pause already
+Late night talks already...
+Troubles got u on, don't know where to go
+So you lost already
+Yeah,
+Saying I ain't did you right
+So tell me what you like
+Don't try me
+`,
   },
   {
     id: 'MUSIC_ID_2',
     name: 'Poley More - Nowhere To Be Found',
-    lyrics: '‘Cause i loved you with my eyes closed...',
+    lyrics: `‘Cause i loved you with my eyes closed
+Take off my blindfold
+My heart is ice cold now
+You left me stranded
+And took my heart for granted
+And now you’re nowhere to be found`,
   },
   {
     id: 'MUSIC_ID_3',
     name: 'prod.push, Poley More - HAPPY ANNIVERSARY',
-    lyrics: 'Thats my shawty knowing all the facts...',
+    lyrics: `Thats my shawty knowing all the facts
+She wont get attached
+Breaking all the rules she thought i won't last
+She saw me, we ain't speaking
+she just want it back
+Running round in circles
+there's no coming back
+thats how you do.
+
+Gifts and all designers 
+if you wanted these - that’s for you 
+When you ready - come 
+ama set a table just for two.
+Miss the time we spent 
+right under the moon.
+Just me and you, me and you`,
   },
 ];
 
@@ -309,12 +338,11 @@ app.get('/slide', async (req, res) => {
     let body = '';
 
     if (variant === 'intro') {
-      title = "It's Just A Song..";
+      title = '"It\'s just a song.."';
     } else if (variant === 'song') {
-      title = 'The Song:';
-      body = '';
+      title = 'The song:';
     } else if (variant === 'lyrics') {
-      title = 'Lyrics';
+      title = '💎';
       body = lyrics;
     } else {
       title = 'TTPhotos';
@@ -323,16 +351,16 @@ app.get('/slide', async (req, res) => {
     const margin = 80;
     const maxTextWidth = width - margin * 2;
 
-    // Draw title (centered). Slightly smaller, with outline
+    // Draw title (centered). Reduced ~30%
     ctx.font = GlobalFonts.has('InterBold')
-      ? '96px InterBold'
-      : 'bold 96px sans-serif';
+      ? '68px InterBold'
+      : 'bold 68px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
     let titleY = 220;
     if (variant === 'intro' || variant === 'song') {
-      titleY = Math.floor((height - 96) / 2);
+      titleY = Math.floor((height - 68) / 2);
     }
     ctx.lineWidth = 8;
     ctx.strokeStyle = '#000000';
@@ -354,12 +382,12 @@ app.get('/slide', async (req, res) => {
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Lyrics text
-        ctx.font = GlobalFonts.has('Inter') ? '52px Inter' : '52px sans-serif';
+        // Lyrics text (reduced ~30%)
+        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
         ctx.fillStyle = '#FFFFFF';
         ctx.lineWidth = 6;
         ctx.strokeStyle = '#000000';
-        const lineHeight = 66;
+        const lineHeight = 46;
         const innerPad = 40;
         drawWrappedText(
           ctx,
@@ -373,8 +401,8 @@ app.get('/slide', async (req, res) => {
       }
     }
 
-    // Footer CTA
-    ctx.font = GlobalFonts.has('Inter') ? '44px Inter' : '44px sans-serif';
+    // Footer CTA (reduced ~30%)
+    ctx.font = GlobalFonts.has('Inter') ? '31px Inter' : '31px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
