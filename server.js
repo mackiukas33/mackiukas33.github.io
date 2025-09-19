@@ -183,11 +183,12 @@ async function postCarousel(accessToken) {
   ];
   const payload = {
     media_type: 'PHOTO',
-    post_mode: 'PUBLISH_TO_DRAFT', // or keep 'DIRECT_POST'
+    post_mode: 'DIRECT_POST', // or keep 'DIRECT_POST'
     post_info: {
-      caption: `🎵 ${song.name}\n#ttphotos`,
+      title: 'Test',
+      description: `🎵 ${song.name}\n#ttphotos`,
       privacy_level: 'PRIVATE_TO_SELF', // use this exact value
-      disable_comment: false,
+      disable_comment: true,
       auto_add_music: true,
     },
     source_info: {
