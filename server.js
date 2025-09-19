@@ -36,7 +36,7 @@ app.get('/login', (req, res) => {
   const params = new URLSearchParams({
     client_key: CLIENT_KEY,
     response_type: 'code',
-    scope: 'user.info.basic video.publish',
+    scope: 'user.info.basic, video.publish',
     redirect_uri: REDIRECT_URI,
     state: csrfState,
   });
