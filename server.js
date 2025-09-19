@@ -243,6 +243,7 @@ function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, options = {}) {
     if (doStroke) ctx.strokeText(line, drawX, cursorY);
     ctx.fillText(line, drawX, cursorY);
   }
+  return cursorY; // last baseline used
 }
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -264,7 +265,7 @@ app.get('/slide', async (req, res) => {
   try {
     const variant = String(req.query.variant || 'intro');
     const song = typeof req.query.song === 'string' ? req.query.song : '';
-    const lyrics = typeof req.query.lyrics === 'string' ? req.query.lyrics : '';
+    let lyrics = typeof req.query.lyrics === 'string' ? req.query.lyrics : '';
 
     const width = 1080;
     const height = 1920;
@@ -343,6 +344,11 @@ app.get('/slide', async (req, res) => {
       title = 'The song:';
     } else if (variant === 'lyrics') {
       title = '';
+      if (!lyrics) {
+        // pick random lyrics from songs array if none provided
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        lyrics = randomSong.lyrics;
+      }
       body = lyrics;
     } else {
       title = 'TTPhotos';
