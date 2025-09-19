@@ -13,6 +13,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 let lastAccessToken = null; // store latest token in-memory for status checks
+let uploadInterval = null; // store interval for scheduled uploads
+let isUploading = false; // track upload state
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // TikTok sandbox credentials
@@ -58,11 +60,41 @@ app.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'Not logged in' });
     }
 
+    // Start scheduled uploads every 5 hours
+    if (uploadInterval) {
+      clearInterval(uploadInterval);
+    }
+
+    // Upload immediately
     const result = await postCarousel(lastAccessToken);
+
+    // Schedule every 5 hours (5 * 60 * 60 * 1000 ms)
+    uploadInterval = setInterval(async () => {
+      try {
+        await postCarousel(lastAccessToken);
+      } catch (error) {
+        console.error('Scheduled upload failed:', error.message);
+      }
+    }, 5 * 60 * 60 * 1000);
+
+    isUploading = true;
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+app.post('/stop', (req, res) => {
+  if (uploadInterval) {
+    clearInterval(uploadInterval);
+    uploadInterval = null;
+  }
+  isUploading = false;
+  res.json({ success: true });
+});
+
+app.get('/status', (req, res) => {
+  res.json({ isUploading });
 });
 
 app.get('/login', (req, res) => {
