@@ -527,11 +527,11 @@ app.get('/slide', async (req, res) => {
     ctx.textAlign = 'left';
 
     // Prevent CDN/browser caching so previews can change each load
-    res.set('Content-Type', 'image/png');
+    res.set('Content-Type', 'image/jpeg');
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.send(canvas.toBuffer('image/png'));
+    res.send(canvas.toBuffer('image/jpeg', { quality: 0.9 }));
   } catch (e) {
     console.error('slide render error', e);
     res.status(500).send('render_error');
