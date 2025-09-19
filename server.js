@@ -114,8 +114,7 @@ app.get('/callback', async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    console.log(tokenRes);
-    res.json(tokenRes);
+    res.json(tokenRes.data);
 
     // const accessToken = tokenRes.data.data.access_token;
     // res.json({
