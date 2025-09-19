@@ -181,24 +181,20 @@ async function postCarousel(accessToken) {
       song.lyrics
     )}&bg=${encodeURIComponent(bg3)}`,
   ];
-
   const payload = {
+    media_type: 'PHOTO',
+    post_mode: 'DIRECT_POST', // or 'PUBLISH_TO_DRAFT'
     post_info: {
-      title: 'TTPhotos',
-      description: `🎵 ${song.name}\n#ttphotos`,
-      privacy_level: 'PRIVATE_TO_SELF',
+      caption: `🎵 ${song.name}\n#ttphotos`,
+      privacy_level: 'SELF_ONLY', // try this value
       disable_comment: false,
       auto_add_music: true,
-      brand_content_toggle: false,
-      brand_organic_toggle: false,
     },
     source_info: {
       source: 'PULL_FROM_URL',
-      photo_images: imageUrls,
+      photo_images: imageUrls, // 3 absolute https URLs
       photo_cover_index: 0,
     },
-    post_mode: 'DIRECT_POST',
-    media_type: 'PHOTO',
   };
 
   const resp = await axios.post(
