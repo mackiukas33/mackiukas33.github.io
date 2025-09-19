@@ -462,6 +462,15 @@ class UploadScheduler {
 // ROUTES
 // ============================================================================
 
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
 // Home page
 app.get('/', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'index.html'));
@@ -474,19 +483,35 @@ app.get('/dashboard', (req, res) => {
 
 // Login
 app.get('/login', (req, res) => {
-  const csrfState = Math.random().toString(36).substring(2);
-  res.cookie('csrfState', csrfState, { maxAge: 60000 });
+  try {
+    log('Login endpoint hit');
 
-  const params = new URLSearchParams({
-    client_key: TIKTOK_CONFIG.clientKey,
-    scope: TIKTOK_CONFIG.scopes,
-    response_type: 'code',
-    redirect_uri: TIKTOK_CONFIG.redirectUri,
-    state: csrfState,
-  });
+    if (!TIKTOK_CONFIG.clientKey || !TIKTOK_CONFIG.redirectUri) {
+      log('Missing TikTok configuration', {
+        clientKey: !!TIKTOK_CONFIG.clientKey,
+        redirectUri: !!TIKTOK_CONFIG.redirectUri,
+      });
+      return res.status(500).json({ error: 'TikTok configuration missing' });
+    }
 
-  const authUrl = `${TIKTOK_CONFIG.baseUrl}/v2/oauth/authorize/?${params}`;
-  res.redirect(authUrl);
+    const csrfState = Math.random().toString(36).substring(2);
+    res.cookie('csrfState', csrfState, { maxAge: 60000 });
+
+    const params = new URLSearchParams({
+      client_key: TIKTOK_CONFIG.clientKey,
+      scope: TIKTOK_CONFIG.scopes,
+      response_type: 'code',
+      redirect_uri: TIKTOK_CONFIG.redirectUri,
+      state: csrfState,
+    });
+
+    const authUrl = `${TIKTOK_CONFIG.baseUrl}/v2/oauth/authorize/?${params}`;
+    log('Redirecting to TikTok auth', { authUrl });
+    res.redirect(authUrl);
+  } catch (error) {
+    log('Login error', { error: error.message });
+    res.status(500).json({ error: 'Login failed' });
+  }
 });
 
 // OAuth callback
@@ -587,10 +612,15 @@ app.get('/slide', async (req, res) => {
 // SERVER STARTUP
 // ============================================================================
 
-app.listen(PORT, () => {
-  log(`Server running on port ${PORT}`);
-  log('TikTok API configured', {
-    clientKey: TIKTOK_CONFIG.clientKey ? 'Set' : 'Missing',
-    redirectUri: TIKTOK_CONFIG.redirectUri,
+// For Vercel deployment
+if (process.env.NODE_ENV === 'production') {
+  module.exports = app;
+} else {
+  app.listen(PORT, () => {
+    log(`Server running on port ${PORT}`);
+    log('TikTok API configured', {
+      clientKey: TIKTOK_CONFIG.clientKey ? 'Set' : 'Missing',
+      redirectUri: TIKTOK_CONFIG.redirectUri,
+    });
   });
-});
+}
