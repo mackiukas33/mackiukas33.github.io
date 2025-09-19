@@ -3,7 +3,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import qs from 'qs';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 
 import dotenv from 'dotenv';
 
@@ -28,51 +28,6 @@ app.get('/', (req, res) => {
     <p>Click <a href="/login">here</a> to log in with TikTok sandbox.</p>
   `);
 });
-
-// -------------------
-// /login route
-// -------------------
-// app.get('/login', (req, res) => {
-//   const state = crypto.randomBytes(16).toString('hex');
-//   stateStore.add(state);
-
-//   const formHtml = `
-//     <html>
-//       <body>
-//         <form id="tiktokLogin" action="https://www.tiktok.com/v2/auth/authorize/" method="POST">
-//           <input type="hidden" name="client_key" value="${CLIENT_KEY}"/>
-//           <input type="hidden" name="response_type" value="code"/>
-//           <input type="hidden" name="scope" value="user.info.basic"/>
-//           <input type="hidden" name="redirect_uri" value="${REDIRECT_URI}"/>
-//           <input type="hidden" name="state" value="${state}"/>
-//         </form>
-//         <script>
-//           document.getElementById('tiktokLogin').submit();
-//         </script>
-//       </body>
-//     </html>
-//   `;
-
-//   res.send(formHtml);
-// });
-
-// app.get('/login', (req, res) => {
-//   const state = crypto.randomBytes(16).toString('hex');
-//   stateStore.add(state);
-
-//   const params = new URLSearchParams({
-//     client_key: CLIENT_KEY,
-//     response_type: 'code',
-//     scope: 'user.info.basic',
-//     redirect_uri: REDIRECT_URI,
-//     state: state,
-//   });
-
-//   // Redirect user to TikTok login page
-//   res.redirect(
-//     `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
-//   );
-// });
 
 app.get('/login', (req, res) => {
   const csrfState = Math.random().toString(36).substring(2);
@@ -158,10 +113,26 @@ async function postCarousel(accessToken) {
   // Use dynamically generated slides with requested texts
   const baseUrl = 'https://ttphotos.online';
   const song = songs[Math.floor(Math.random() * songs.length)];
+  // pick 3 photos for backgrounds
+  const photosDir = path.join(process.cwd(), 'public/photos');
+  const files = fs
+    .readdirSync(photosDir)
+    .filter(
+      (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
+    );
+  if (files.length < 3)
+    throw new Error('Need at least 3 photos in /public/photos');
+  const selected = files.sort(() => 0.5 - Math.random()).slice(0, 3);
+  const [bg1, bg2, bg3] = selected;
+
   const imageUrls = [
-    `${baseUrl}/slide?variant=intro`,
-    `${baseUrl}/slide?variant=song&song=${encodeURIComponent(song.name)}`,
-    `${baseUrl}/slide?variant=lyrics&lyrics=${encodeURIComponent(song.lyrics)}`,
+    `${baseUrl}/slide?variant=intro&bg=${encodeURIComponent(bg1)}`,
+    `${baseUrl}/slide?variant=song&song=${encodeURIComponent(
+      song.name
+    )}&bg=${encodeURIComponent(bg2)}`,
+    `${baseUrl}/slide?variant=lyrics&lyrics=${encodeURIComponent(
+      song.lyrics
+    )}&bg=${encodeURIComponent(bg3)}`,
   ];
 
   const payload = {
@@ -237,19 +208,54 @@ app.get('/slide', async (req, res) => {
     const variant = String(req.query.variant || 'intro');
     const song = typeof req.query.song === 'string' ? req.query.song : '';
     const lyrics = typeof req.query.lyrics === 'string' ? req.query.lyrics : '';
+    const bg = typeof req.query.bg === 'string' ? req.query.bg : '';
 
     const width = 1080;
     const height = 1920;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Gradient background
-    const grad = ctx.createLinearGradient(0, 0, 0, height);
-    grad.addColorStop(0, '#0f0c29');
-    grad.addColorStop(0.5, '#302b63');
-    grad.addColorStop(1, '#24243e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
+    // Background: photo if provided, otherwise gradient
+    if (bg) {
+      try {
+        const img = await loadImage(
+          path.join(process.cwd(), 'public/photos', bg)
+        );
+        // cover-fit image
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / height;
+        let drawW, drawH, dx, dy;
+        if (imgRatio > canvasRatio) {
+          // image wider than canvas
+          drawH = height;
+          drawW = height * imgRatio;
+          dx = (width - drawW) / 2;
+          dy = 0;
+        } else {
+          // image taller than canvas
+          drawW = width;
+          drawH = width / imgRatio;
+          dx = 0;
+          dy = (height - drawH) / 2;
+        }
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+      } catch (e) {
+        // fallback gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, '#0f0c29');
+        grad.addColorStop(0.5, '#302b63');
+        grad.addColorStop(1, '#24243e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+      }
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#0f0c29');
+      grad.addColorStop(0.5, '#302b63');
+      grad.addColorStop(1, '#24243e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+    }
 
     // Subtle vignette
     const vignette = ctx.createRadialGradient(
