@@ -152,8 +152,10 @@ async function postCarousel(accessToken) {
     );
   if (files.length < 3)
     throw new Error('Need at least 3 photos in /public/photos');
-  const selected = files.sort(() => 0.5 - Math.random()).slice(0, 3);
-  const [bg1, bg2, bg3] = selected;
+  // Ensure no duplicate photos are selected (shuffle and take first 3 unique)
+  const shuffled = files.sort(() => 0.5 - Math.random());
+  const uniqueSelected = [...new Set(shuffled)].slice(0, 3);
+  const [bg1, bg2, bg3] = uniqueSelected;
 
   const imageUrls = [
     `${baseUrl}/slide?variant=intro&bg=${encodeURIComponent(bg1)}`,
@@ -172,7 +174,8 @@ async function postCarousel(accessToken) {
     media_type: 'PHOTO',
     post_mode: 'MEDIA_UPLOAD',
     post_info: {
-      caption: `${title}\n\n🎵 ${song.name}\n\n${hashtags}`,
+      title,
+      description: `🎵 ${song.name}\n\n${hashtags}`,
       privacy_level: 'SELF_ONLY',
       disable_comment: false,
       auto_add_music: true,
