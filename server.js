@@ -265,39 +265,39 @@ app.get('/slide', async (req, res) => {
     const variant = String(req.query.variant || 'intro');
     const song = typeof req.query.song === 'string' ? req.query.song : '';
     const lyrics = typeof req.query.lyrics === 'string' ? req.query.lyrics : '';
-    const bg = typeof req.query.bg === 'string' ? req.query.bg : '';
 
     const width = 1080;
     const height = 1920;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background: photo if provided, otherwise gradient
-    if (bg) {
-      try {
-        const img = await loadImage(
-          path.join(process.cwd(), 'public/photos', bg)
+    // Background: always pick a random photo; fallback to gradient if none
+    try {
+      const photosDir = path.join(process.cwd(), 'public/photos');
+      const files = fs
+        .readdirSync(photosDir)
+        .filter(
+          (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
         );
-        // cover-fit image
+      if (files.length > 0) {
+        const randomBg = files[Math.floor(Math.random() * files.length)];
+        const img = await loadImage(path.join(photosDir, randomBg));
         const imgRatio = img.width / img.height;
         const canvasRatio = width / height;
         let drawW, drawH, dx, dy;
         if (imgRatio > canvasRatio) {
-          // image wider than canvas
           drawH = height;
           drawW = height * imgRatio;
           dx = (width - drawW) / 2;
           dy = 0;
         } else {
-          // image taller than canvas
           drawW = width;
           drawH = width / imgRatio;
           dx = 0;
           dy = (height - drawH) / 2;
         }
         ctx.drawImage(img, dx, dy, drawW, drawH);
-      } catch (e) {
-        // fallback gradient
+      } else {
         const grad = ctx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#0f0c29');
         grad.addColorStop(0.5, '#302b63');
@@ -305,50 +305,13 @@ app.get('/slide', async (req, res) => {
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, width, height);
       }
-    } else {
-      // If no bg param, try to pick a random photo; fallback to gradient if none
-      try {
-        const photosDir = path.join(process.cwd(), 'public/photos');
-        const files = fs
-          .readdirSync(photosDir)
-          .filter(
-            (f) =>
-              f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
-          );
-        if (files.length > 0) {
-          const randomBg = files[Math.floor(Math.random() * files.length)];
-          const img = await loadImage(path.join(photosDir, randomBg));
-          const imgRatio = img.width / img.height;
-          const canvasRatio = width / height;
-          let drawW, drawH, dx, dy;
-          if (imgRatio > canvasRatio) {
-            drawH = height;
-            drawW = height * imgRatio;
-            dx = (width - drawW) / 2;
-            dy = 0;
-          } else {
-            drawW = width;
-            drawH = width / imgRatio;
-            dx = 0;
-            dy = (height - drawH) / 2;
-          }
-          ctx.drawImage(img, dx, dy, drawW, drawH);
-        } else {
-          const grad = ctx.createLinearGradient(0, 0, 0, height);
-          grad.addColorStop(0, '#0f0c29');
-          grad.addColorStop(0.5, '#302b63');
-          grad.addColorStop(1, '#24243e');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, width, height);
-        }
-      } catch {
-        const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#0f0c29');
-        grad.addColorStop(0.5, '#302b63');
-        grad.addColorStop(1, '#24243e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
-      }
+    } catch {
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#0f0c29');
+      grad.addColorStop(0.5, '#302b63');
+      grad.addColorStop(1, '#24243e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
     }
 
     // Subtle vignette
@@ -379,7 +342,7 @@ app.get('/slide', async (req, res) => {
     } else if (variant === 'song') {
       title = 'The song:';
     } else if (variant === 'lyrics') {
-      title = '💎';
+      title = '';
       body = lyrics;
     } else {
       title = 'TTPhotos';
@@ -387,6 +350,19 @@ app.get('/slide', async (req, res) => {
 
     const margin = 80;
     const maxTextWidth = width - margin * 2;
+
+    // If lyrics slide, draw Twemoji gem image above the title
+    if (variant === 'lyrics') {
+      try {
+        const gem = await loadImage(
+          'https://twemoji.maxcdn.com/v/latest/72x72/1f48e.png'
+        );
+        const gemSize = 120;
+        const gx = (width - gemSize) / 2;
+        const gy = 130;
+        ctx.drawImage(gem, gx, gy, gemSize, gemSize);
+      } catch {}
+    }
 
     // Draw title (centered). Reduced ~30%
     ctx.font = GlobalFonts.has('InterBold')
@@ -398,6 +374,8 @@ app.get('/slide', async (req, res) => {
     let titleY = 220;
     if (variant === 'intro' || variant === 'song') {
       titleY = Math.floor((height - 68) / 2);
+    } else if (variant === 'lyrics') {
+      titleY = 300;
     }
     ctx.lineWidth = 8;
     ctx.strokeStyle = '#000000';
