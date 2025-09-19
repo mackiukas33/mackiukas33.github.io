@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 let lastAccessToken = null; // store latest token in-memory for status checks
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // TikTok sandbox credentials
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -93,10 +94,34 @@ app.get('/callback', async (req, res) => {
     const accessToken = tokenRes.data.access_token;
     lastAccessToken = accessToken;
     const publish = await postCarousel(accessToken);
+
+    // Poll publish status a few times (best-effort) and include in response
+    let statusChecks = [];
+    try {
+      const publishId = publish.api?.data?.publish_id;
+      if (publishId) {
+        for (let i = 0; i < 4; i++) {
+          const s = await getPublishStatus(accessToken, publishId);
+          statusChecks.push(s);
+          // stop early if returned status indicates completion
+          const st = s?.data?.status;
+          if (
+            st &&
+            (st === 'PUBLISHED' || st === 'FAILED' || st === 'CANCELLED')
+          )
+            break;
+          await sleep(2000);
+        }
+      }
+    } catch (e) {
+      statusChecks.push({ error: e.response?.data || { message: e.message } });
+    }
+
     res.json({
       token: tokenRes.data,
       publish_api: publish.api,
       slide_urls: publish.imageUrls,
+      status_checks: statusChecks,
     });
   } catch (err) {
     console.error(
