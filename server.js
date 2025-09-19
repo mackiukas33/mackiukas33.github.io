@@ -1,32 +1,78 @@
 import express from 'express';
 import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
 import qs from 'qs';
+import path from 'path';
+import fs from 'fs';
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
-import { getRandomHashtags, getRandomTitle } from './public/data/hashtags.js';
-import { songs } from './public/data/songs.js';
-
 import dotenv from 'dotenv';
+import { songs } from './public/data/songs.js';
+import { getRandomTitle, getRandomHashtags } from './public/data/hashtags.js';
 
 dotenv.config();
+
+// ============================================================================
+// CONFIGURATION & INITIALIZATION
+// ============================================================================
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-let lastAccessToken = null; // store latest token in-memory for status checks
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// TikTok sandbox credentials
-const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
-const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
-const REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI;
+// TikTok API Configuration
+const TIKTOK_CONFIG = {
+  clientKey: process.env.TIKTOK_CLIENT_KEY,
+  clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+  redirectUri: process.env.TIKTOK_REDIRECT_URI,
+  baseUrl: 'https://open.tiktokapis.com',
+  scopes: 'user.info.basic,video.publish',
+};
 
-// In-memory state store
-// const stateStore = new Set();
+// Application State
+const appState = {
+  accessToken: null,
+  uploadScheduler: {
+    active: false,
+    interval: null,
+    nextUpload: null,
+    dailyUploads: 0,
+    lastUploadDate: null,
+  },
+};
 
-// Serve static photos
+// Constants
+const UPLOAD_INTERVAL_MS = 5 * 60 * 60 * 1000; // 5 hours
+const DAILY_UPLOAD_LIMIT = 5;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const log = (message, data = null) => {
+  const timestamp = new Date().toISOString();
+  console.log(
+    `[${timestamp}] ${message}`,
+    data ? JSON.stringify(data, null, 2) : ''
+  );
+};
+
+const isNewDay = () => {
+  const today = new Date().toDateString();
+  return appState.uploadScheduler.lastUploadDate !== today;
+};
+
+const resetDailyUploads = () => {
+  if (isNewDay()) {
+    appState.uploadScheduler.dailyUploads = 0;
+    appState.uploadScheduler.lastUploadDate = new Date().toDateString();
+    log('Daily upload count reset');
+  }
+};
+
+// ============================================================================
+// MIDDLEWARE & STATIC FILES
+// ============================================================================
+
+app.use(express.json());
 app.use(express.static('public'));
 
-// Register bundled fonts for serverless (e.g., Vercel) where system fonts are absent
+// Register fonts for serverless environments
 try {
   const fontsDir = path.join(process.cwd(), 'public', 'fonts');
   GlobalFonts.registerFromPath(
@@ -37,431 +83,514 @@ try {
     path.join(fontsDir, 'Inter-Bold.ttf'),
     'InterBold'
   );
-} catch (e) {
-  console.warn(
-    'Font registration failed; ensure TTFs exist under public/fonts/',
-    e.message || e
-  );
+} catch (error) {
+  console.warn('Font registration failed:', error.message);
 }
 
+// ============================================================================
+// TIKTOK API FUNCTIONS
+// ============================================================================
+
+class TikTokAPI {
+  static async exchangeCodeForToken(code) {
+    const tokenUrl = `${TIKTOK_CONFIG.baseUrl}/v2/oauth/token/`;
+    const payload = {
+      client_key: TIKTOK_CONFIG.clientKey,
+      client_secret: TIKTOK_CONFIG.clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: TIKTOK_CONFIG.redirectUri,
+    };
+
+    log('Exchanging code for token');
+    const response = await axios.post(tokenUrl, qs.stringify(payload), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+
+    return response.data;
+  }
+
+  static async getUserInfo(accessToken) {
+    const userUrl = `${TIKTOK_CONFIG.baseUrl}/v2/user/info/`;
+    const response = await axios.get(userUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return response.data;
+  }
+
+  static async createPhotoCarousel(
+    accessToken,
+    imageUrls,
+    song,
+    title,
+    hashtags
+  ) {
+    const payload = {
+      media_type: 'PHOTO',
+      post_mode: 'MEDIA_UPLOAD',
+      post_info: {
+        title,
+        description: `🎵 ${song.name}\n\n${hashtags}`,
+        privacy_level: 'SELF_ONLY',
+        disable_comment: false,
+        auto_add_music: true,
+      },
+      source_info: {
+        source: 'PULL_FROM_URL',
+        photo_images: imageUrls,
+        photo_cover_index: 0,
+      },
+    };
+
+    log('Creating photo carousel', {
+      song: song.name,
+      imageCount: imageUrls.length,
+    });
+
+    const response = await axios.post(
+      `${TIKTOK_CONFIG.baseUrl}/v2/post/publish/content/init/`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      }
+    );
+
+    return response.data;
+  }
+
+  static async getPublishStatus(accessToken, publishId) {
+    const statusUrl = `${TIKTOK_CONFIG.baseUrl}/v2/post/publish/status/fetch/`;
+    const response = await axios.post(
+      statusUrl,
+      { publish_id: publishId },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      }
+    );
+    return response.data;
+  }
+}
+
+// ============================================================================
+// IMAGE GENERATION FUNCTIONS
+// ============================================================================
+
+class ImageGenerator {
+  static async generateSlide(variant, options = {}) {
+    const { width, height } = { width: 1080, height: 1920 };
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Load background image
+    const bgImage = await this.loadRandomBackground();
+    ctx.drawImage(bgImage, 0, 0, width, height);
+
+    // Add gradient overlay
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(0,0,0,0.3)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Generate content based on variant
+    switch (variant) {
+      case 'intro':
+        this.drawIntroSlide(ctx, width, height);
+        break;
+      case 'song':
+        this.drawSongSlide(ctx, width, height, options.song);
+        break;
+      case 'lyrics':
+        this.drawLyricsSlide(ctx, width, height, options.lyrics);
+        break;
+    }
+
+    // Add footer
+    this.drawFooter(ctx, width, height);
+
+    return canvas.toBuffer('image/jpeg');
+  }
+
+  static async loadRandomBackground() {
+    const photosDir = path.join(process.cwd(), 'public/photos');
+    const files = fs
+      .readdirSync(photosDir)
+      .filter(
+        (f) => f.endsWith('.jpg') || f.endsWith('.jpeg') || f.endsWith('.png')
+      );
+
+    const randomFile = files[Math.floor(Math.random() * files.length)];
+    const imagePath = path.join(photosDir, randomFile);
+    return await loadImage(imagePath);
+  }
+
+  static drawIntroSlide(ctx, width, height) {
+    ctx.font = 'bold 80px Inter';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+    ctx.textAlign = 'center';
+    ctx.strokeText('"It\'s just a song.."', width / 2, height / 2);
+    ctx.fillText('"It\'s just a song.."', width / 2, height / 2);
+  }
+
+  static drawSongSlide(ctx, width, height, song) {
+    ctx.font = 'bold 80px Inter';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+    ctx.textAlign = 'center';
+    ctx.strokeText('The song:', width / 2, height / 2);
+    ctx.fillText('The song:', width / 2, height / 2);
+  }
+
+  static async drawLyricsSlide(ctx, width, height, lyrics) {
+    // Draw gem emoji
+    try {
+      const gem = await loadImage(
+        'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f48e.png'
+      );
+      const gemSize = 120;
+      const gx = (width - gemSize) / 2;
+      const gy = 180;
+      ctx.drawImage(gem, gx, gy, gemSize, gemSize);
+    } catch (error) {
+      console.warn('Failed to load gem emoji:', error.message);
+    }
+
+    // Draw lyrics in shadow box
+    this.drawLyricsBox(ctx, width, height, lyrics);
+  }
+
+  static drawLyricsBox(ctx, width, height, lyrics) {
+    const lines = lyrics.split('\n');
+    const lineHeight = 60;
+    const padding = 40;
+    const maxWidth = width - 2 * padding;
+
+    // Calculate box dimensions
+    const boxHeight = lines.length * lineHeight + 2 * padding;
+    const boxY = (height - boxHeight) / 2;
+
+    // Draw shadow box
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.drawRoundedRect(ctx, padding, boxY, maxWidth, boxHeight, 20);
+    ctx.fill();
+
+    // Draw lyrics
+    ctx.font = 'bold 50px Inter';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.textAlign = 'center';
+
+    lines.forEach((line, index) => {
+      const y = boxY + padding + (index + 1) * lineHeight;
+      ctx.strokeText(line, width / 2, y);
+      ctx.fillText(line, width / 2, y);
+    });
+  }
+
+  static drawFooter(ctx, width, height) {
+    ctx.font = 'bold 50px Inter';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+    ctx.textAlign = 'center';
+    ctx.strokeText('Follow for more underrated gems', width / 2, height - 180);
+    ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
+  }
+
+  static drawRoundedRect(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+}
+
+// ============================================================================
+// UPLOAD SCHEDULER
+// ============================================================================
+
+class UploadScheduler {
+  static start() {
+    if (appState.uploadScheduler.active) {
+      log('Upload scheduler already active');
+      return;
+    }
+
+    appState.uploadScheduler.active = true;
+    appState.uploadScheduler.nextUpload = new Date(
+      Date.now() + UPLOAD_INTERVAL_MS
+    );
+
+    // Immediate upload
+    this.performUpload();
+
+    // Schedule recurring uploads
+    appState.uploadScheduler.interval = setInterval(() => {
+      this.performUpload();
+    }, UPLOAD_INTERVAL_MS);
+
+    log('Upload scheduler started', {
+      nextUpload: appState.uploadScheduler.nextUpload,
+    });
+  }
+
+  static stop() {
+    if (!appState.uploadScheduler.active) {
+      log('Upload scheduler not active');
+      return;
+    }
+
+    appState.uploadScheduler.active = false;
+    appState.uploadScheduler.nextUpload = null;
+
+    if (appState.uploadScheduler.interval) {
+      clearInterval(appState.uploadScheduler.interval);
+      appState.uploadScheduler.interval = null;
+    }
+
+    log('Upload scheduler stopped');
+  }
+
+  static async performUpload() {
+    if (!appState.accessToken) {
+      log('No access token available for upload');
+      return;
+    }
+
+    resetDailyUploads();
+
+    if (appState.uploadScheduler.dailyUploads >= DAILY_UPLOAD_LIMIT) {
+      log('Daily upload limit reached', {
+        dailyUploads: appState.uploadScheduler.dailyUploads,
+      });
+      return;
+    }
+
+    try {
+      log('Performing scheduled upload');
+      await this.createAndUploadCarousel();
+      appState.uploadScheduler.dailyUploads++;
+      appState.uploadScheduler.nextUpload = new Date(
+        Date.now() + UPLOAD_INTERVAL_MS
+      );
+      log('Upload completed successfully', {
+        dailyUploads: appState.uploadScheduler.dailyUploads,
+      });
+    } catch (error) {
+      log('Upload failed', { error: error.message });
+    }
+  }
+
+  static async createAndUploadCarousel() {
+    const song = songs[Math.floor(Math.random() * songs.length)];
+    const title = getRandomTitle();
+    const hashtags = getRandomHashtags(5).join(' ');
+
+    // Generate slide URLs
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'https://ttphotos.online';
+    const imageUrls = [
+      `${baseUrl}/slide?variant=intro`,
+      `${baseUrl}/slide?variant=song&song=${encodeURIComponent(song.name)}`,
+      `${baseUrl}/slide?variant=lyrics&lyrics=${encodeURIComponent(
+        song.lyrics
+      )}`,
+    ];
+
+    // Create carousel
+    const result = await TikTokAPI.createPhotoCarousel(
+      appState.accessToken,
+      imageUrls,
+      song,
+      title,
+      hashtags
+    );
+
+    // Poll status
+    if (result.data?.publish_id) {
+      await this.pollUploadStatus(result.data.publish_id);
+    }
+
+    return result;
+  }
+
+  static async pollUploadStatus(publishId) {
+    for (let i = 0; i < 3; i++) {
+      await sleep(2000);
+      try {
+        const status = await TikTokAPI.getPublishStatus(
+          appState.accessToken,
+          publishId
+        );
+        const statusType = status.data?.status;
+
+        if (
+          statusType === 'PUBLISHED' ||
+          statusType === 'FAILED' ||
+          statusType === 'CANCELLED'
+        ) {
+          log('Upload status final', { status: statusType });
+          break;
+        }
+      } catch (error) {
+        log('Status check failed', { error: error.message });
+      }
+    }
+  }
+}
+
+// ============================================================================
+// ROUTES
+// ============================================================================
+
+// Home page
 app.get('/', (req, res) => {
-  res.send(`
-    <h1>TTPhotos Sandbox App</h1>
-    <p>Click <a href="/login">here</a> to log in with TikTok sandbox.</p>
-  `);
+  res.sendFile(path.join(process.cwd(), 'index.html'));
 });
 
+// Dashboard
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'dashboard.html'));
+});
+
+// Login
 app.get('/login', (req, res) => {
   const csrfState = Math.random().toString(36).substring(2);
   res.cookie('csrfState', csrfState, { maxAge: 60000 });
 
   const params = new URLSearchParams({
-    client_key: CLIENT_KEY,
+    client_key: TIKTOK_CONFIG.clientKey,
+    scope: TIKTOK_CONFIG.scopes,
     response_type: 'code',
-    scope: 'user.info.basic,video.publish,video.upload',
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: TIKTOK_CONFIG.redirectUri,
     state: csrfState,
   });
-  res.redirect(
-    `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
-  );
+
+  const authUrl = `${TIKTOK_CONFIG.baseUrl}/v2/oauth/authorize/?${params}`;
+  res.redirect(authUrl);
 });
 
-// -------------------
-// /callback route
-// -------------------
+// OAuth callback
 app.get('/callback', async (req, res) => {
-  const { code, state } = req.query;
-
-  if (!code || !state) return res.status(400).send('Missing code or state');
-  // if (!stateStore.has(state)) return res.status(403).send('Invalid state');
-
-  // stateStore.delete(state);
-
   try {
-    // Exchange code for access token (sandbox)
-    const tokenRes = await axios.post(
-      'https://open.tiktokapis.com/v2/oauth/token/',
-      qs.stringify({
-        client_key: CLIENT_KEY,
-        client_secret: CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: REDIRECT_URI,
-      }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
+    const { code, state } = req.query;
 
-    // res.json(tokenRes.data);
-    const accessToken = tokenRes.data.access_token;
-    lastAccessToken = accessToken;
-    const publish = await postCarousel(accessToken);
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code not provided' });
+    }
 
-    // Poll publish status a few times (best-effort) and include in response
-    let statusChecks = [];
-    try {
-      const publishId = publish.api?.data?.publish_id;
-      if (publishId) {
-        for (let i = 0; i < 4; i++) {
-          const s = await getPublishStatus(accessToken, publishId);
-          statusChecks.push(s);
-          // stop early if returned status indicates completion
-          const st = s?.data?.status;
-          if (
-            st &&
-            (st === 'PUBLISHED' || st === 'FAILED' || st === 'CANCELLED')
-          )
-            break;
-          await sleep(2000);
-        }
-      }
-    } catch (e) {
-      statusChecks.push({ error: e.response?.data || { message: e.message } });
+    // Exchange code for token
+    const tokenData = await TikTokAPI.exchangeCodeForToken(code);
+    appState.accessToken = tokenData.access_token;
+
+    // Get user info
+    const userInfo = await TikTokAPI.getUserInfo(appState.accessToken);
+
+    log('User authenticated successfully', {
+      openId: tokenData.open_id,
+      displayName: userInfo.data?.user?.display_name,
+    });
+
+    // Redirect to dashboard
+    res.redirect('/dashboard?success=true');
+  } catch (error) {
+    log('Authentication failed', { error: error.message });
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// API Routes
+app.get('/api/status', async (req, res) => {
+  try {
+    let userInfo = null;
+    if (appState.accessToken) {
+      userInfo = await TikTokAPI.getUserInfo(appState.accessToken);
     }
 
     res.json({
-      token: tokenRes.data,
-      publish_api: publish.api,
-      slide_urls: publish.imageUrls,
-      status_checks: statusChecks,
+      connected: !!appState.accessToken,
+      userInfo: userInfo?.data?.user,
+      dailyUploads: appState.uploadScheduler.dailyUploads,
+      uploadActive: appState.uploadScheduler.active,
+      nextUpload: appState.uploadScheduler.nextUpload,
     });
-  } catch (err) {
-    console.error(
-      'Token error:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-    res.status(500).json(err.response?.data || { error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get status' });
   }
 });
 
-// -------------------
-// Carousel Posting (sandbox-safe)
-// -------------------
-
-async function postCarousel(accessToken) {
-  // Use dynamically generated slides with requested texts
-  const baseUrl = 'https://ttphotos.online';
-  const song = songs[Math.floor(Math.random() * songs.length)];
-  // pick 3 photos for backgrounds
-  const photosDir = path.join(process.cwd(), 'public/photos');
-  const files = fs
-    .readdirSync(photosDir)
-    .filter(
-      (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
-    );
-  if (files.length < 3)
-    throw new Error('Need at least 3 photos in /public/photos');
-  // Ensure no duplicate photos are selected (shuffle and take first 3 unique)
-  const shuffled = files.sort(() => 0.5 - Math.random());
-  const uniqueSelected = [...new Set(shuffled)].slice(0, 3);
-  const [bg1, bg2, bg3] = uniqueSelected;
-
-  const imageUrls = [
-    `${baseUrl}/slide?variant=intro&bg=${encodeURIComponent(bg1)}`,
-    `${baseUrl}/slide?variant=song&song=${encodeURIComponent(
-      song.name
-    )}&bg=${encodeURIComponent(bg2)}`,
-    `${baseUrl}/slide?variant=lyrics&lyrics=${encodeURIComponent(
-      song.lyrics
-    )}&bg=${encodeURIComponent(bg3)}`,
-  ];
-  // Get random catchy title and trending hashtags
-  const title = getRandomTitle();
-  const hashtags = getRandomHashtags(5).join(' ');
-
-  const payload = {
-    media_type: 'PHOTO',
-    post_mode: 'MEDIA_UPLOAD',
-    post_info: {
-      title,
-      description: `🎵 ${song.name}\n\n${hashtags}`,
-      privacy_level: 'SELF_ONLY',
-      disable_comment: false,
-      auto_add_music: true,
-    },
-    source_info: {
-      source: 'PULL_FROM_URL',
-      photo_images: imageUrls,
-      photo_cover_index: 0,
-    },
-  };
-
-  const resp = await axios.post(
-    'https://open.tiktokapis.com/v2/post/publish/content/init/',
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-    }
-  );
-  return { api: resp.data, imageUrls };
-}
-
-// -------------------
-// Publish status check
-// -------------------
-async function getPublishStatus(accessToken, publishId) {
-  const resp = await axios.post(
-    'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
-    { publish_id: publishId },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-    }
-  );
-  return resp.data;
-}
-
-// GET /publish-status?publish_id=...
-app.get('/publish-status', async (req, res) => {
-  try {
-    const publishId = String(req.query.publish_id || '');
-    const token =
-      (typeof req.query.access_token === 'string' && req.query.access_token) ||
-      lastAccessToken;
-    if (!publishId)
-      return res.status(400).json({ error: 'missing publish_id' });
-    if (!token)
-      return res
-        .status(400)
-        .json({ error: 'missing access_token (none stored yet)' });
-    const data = await getPublishStatus(token, publishId);
-    res.json(data);
-  } catch (e) {
-    console.error('status error', e.response?.data || e.message);
-    res.status(500).json(e.response?.data || { error: e.message });
-  }
+app.get('/api/upload-state', (req, res) => {
+  res.json({
+    active: appState.uploadScheduler.active,
+    nextUpload: appState.uploadScheduler.nextUpload,
+    dailyUploads: appState.uploadScheduler.dailyUploads,
+  });
 });
 
-function drawRoundedRect(ctx, x, y, w, h, r) {
-  const radius = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + w - radius, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-  ctx.lineTo(x + w, y + h - radius);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-  ctx.lineTo(x + radius, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-}
-
-// Measure-only: wrap text into lines to fit maxWidth, preserving newlines
-function computeWrappedLines(ctx, text, maxWidth) {
-  const paragraphs = String(text).split(/\r?\n/);
-  const lines = [];
-  for (let p = 0; p < paragraphs.length; p++) {
-    const words = paragraphs[p].split(/\s+/);
-    let line = '';
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line.length ? line + ' ' + words[i] : words[i];
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && i > 0) {
-        lines.push(line);
-        line = words[i];
-      } else {
-        line = testLine;
-      }
-    }
-    if (line) lines.push(line);
+app.post('/api/start-uploading', (req, res) => {
+  if (!appState.accessToken) {
+    return res.status(400).json({ error: 'Not authenticated' });
   }
-  return lines;
-}
 
+  UploadScheduler.start();
+  res.json({ success: true });
+});
+
+app.post('/api/stop-uploading', (req, res) => {
+  UploadScheduler.stop();
+  res.json({ success: true });
+});
+
+// Slide generation
 app.get('/slide', async (req, res) => {
   try {
-    const variant = String(req.query.variant || 'intro');
-    const song = typeof req.query.song === 'string' ? req.query.song : '';
-    let lyrics = typeof req.query.lyrics === 'string' ? req.query.lyrics : '';
+    const { variant, song, lyrics } = req.query;
 
-    const width = 1080;
-    const height = 1920;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    const options = {};
+    if (song) options.song = { name: song };
+    if (lyrics) options.lyrics = lyrics;
 
-    // Background: always pick a random photo; fallback to gradient if none
-    try {
-      const photosDir = path.join(process.cwd(), 'public/photos');
-      const files = fs
-        .readdirSync(photosDir)
-        .filter(
-          (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
-        );
-      if (files.length > 0) {
-        const randomBg = files[Math.floor(Math.random() * files.length)];
-        const img = await loadImage(path.join(photosDir, randomBg));
-        const imgRatio = img.width / img.height;
-        const canvasRatio = width / height;
-        let drawW, drawH, dx, dy;
-        if (imgRatio > canvasRatio) {
-          drawH = height;
-          drawW = height * imgRatio;
-          dx = (width - drawW) / 2;
-          dy = 0;
-        } else {
-          drawW = width;
-          drawH = width / imgRatio;
-          dx = 0;
-          dy = (height - drawH) / 2;
-        }
-        ctx.drawImage(img, dx, dy, drawW, drawH);
-      } else {
-        const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#0f0c29');
-        grad.addColorStop(0.5, '#302b63');
-        grad.addColorStop(1, '#24243e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
-      }
-    } catch {
-      const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, '#0f0c29');
-      grad.addColorStop(0.5, '#302b63');
-      grad.addColorStop(1, '#24243e');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
-    }
+    const imageBuffer = await ImageGenerator.generateSlide(variant, options);
 
-    // Subtle vignette
-    const vignette = ctx.createRadialGradient(
-      width / 2,
-      height / 2,
-      Math.min(width, height) * 0.2,
-      width / 2,
-      height / 2,
-      Math.max(width, height) * 0.7
-    );
-    vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, width, height);
+    res.set({
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    });
 
-    // Text style
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 12;
-
-    let title = '';
-    let body = '';
-
-    if (variant === 'intro') {
-      title = '"It\'s just a song.."';
-    } else if (variant === 'song') {
-      title = 'The song:';
-    } else if (variant === 'lyrics') {
-      title = '';
-      if (!lyrics) {
-        // pick random lyrics from songs array if none provided
-        const randomSong = songs[Math.floor(Math.random() * songs.length)];
-        lyrics = randomSong.lyrics;
-      }
-      body = lyrics;
-    } else {
-      title = 'TTPhotos';
-    }
-
-    const margin = 80;
-    const maxTextWidth = width - margin * 2;
-
-    // If lyrics slide, draw Twemoji gem image above the title
-    if (variant === 'lyrics') {
-      try {
-        const gem = await loadImage(
-          'https://twemoji.maxcdn.com/v/latest/72x72/1f48e.png'
-        );
-        const gemSize = 120;
-        const gx = (width - gemSize) / 2;
-        const gy = 180;
-        ctx.drawImage(gem, gx, gy, gemSize, gemSize);
-      } catch {}
-    }
-
-    // Draw title (centered). Reduced ~30%
-    ctx.font = GlobalFonts.has('InterBold')
-      ? '68px InterBold'
-      : 'bold 68px sans-serif';
-    const titleMetrics = ctx.measureText(title);
-    const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
-    const titleX = (width - titleRenderWidth) / 2;
-    let titleY = 220;
-    if (variant === 'intro' || variant === 'song') {
-      titleY = Math.floor((height - 68) / 2);
-    } else if (variant === 'lyrics') {
-      titleY = 300;
-    }
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = '#000000';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeText(title, titleX, titleY);
-    ctx.fillText(title, titleX, titleY);
-
-    // Draw body/wrapped lyrics
-    if (body) {
-      if (variant === 'lyrics') {
-        // Lyrics panel: center text within a fitted shadow box
-        const panelX = margin;
-        const panelW = width - margin * 2;
-        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
-        const lineHeight = 46;
-        const innerPad = 40;
-        const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
-        const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
-        const panelH = totalHeight + innerPad * 2;
-        const panelY = Math.max(0, Math.floor((height - panelH) / 2));
-
-        // Draw shadow box
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#000000';
-        drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Draw centered lyrics
-        ctx.fillStyle = '#FFFFFF';
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = '#000000';
-        ctx.textAlign = 'center';
-        const startY = panelY + Math.floor((panelH - totalHeight) / 2);
-        const centerX = panelX + Math.floor(panelW / 2);
-        for (let i = 0; i < lines.length; i++) {
-          const y = startY + i * lineHeight;
-          ctx.strokeText(lines[i], centerX, y);
-          ctx.fillText(lines[i], centerX, y);
-        }
-        ctx.textAlign = 'left';
-      }
-    }
-
-    // Footer CTA (reduced ~30%)
-    ctx.font = GlobalFonts.has('Inter') ? '31px Inter' : '31px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.textAlign = 'center';
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#000000';
-    ctx.strokeText('Follow for more underrated gems', width / 2, height - 180);
-    ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
-    ctx.textAlign = 'left';
-
-    // Prevent CDN/browser caching so previews can change each load
-    res.set('Content-Type', 'image/jpeg');
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-    res.send(canvas.toBuffer('image/jpeg'));
-  } catch (e) {
-    console.error('slide render error', e);
-    res.status(500).send('render_error');
+    res.send(imageBuffer);
+  } catch (error) {
+    log('Slide generation failed', { error: error.message });
+    res.status(500).json({ error: 'Failed to generate slide' });
   }
 });
-// -------------------
-// Start server
-// -------------------
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// ============================================================================
+// SERVER STARTUP
+// ============================================================================
+
+app.listen(PORT, () => {
+  log(`Server running on port ${PORT}`);
+  log('TikTok API configured', {
+    clientKey: TIKTOK_CONFIG.clientKey ? 'Set' : 'Missing',
+    redirectUri: TIKTOK_CONFIG.redirectUri,
+  });
+});

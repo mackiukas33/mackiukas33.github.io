@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TTPhotos Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        background: linear-gradient(
+          135deg,
+          #000000 0%,
+          #1a1a1a 50%,
+          #2d2d2d 100%
+        );
+        min-height: 100vh;
+        color: white;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        background: linear-gradient(45deg, #ff0050, #ff4081);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .status-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(10px);
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #28a745;
+      }
+
+      .status-dot.inactive {
+        background: #6c757d;
+      }
+
+      .status-dot.error {
+        background: #dc3545;
+      }
+
+      .controls {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        text-align: center;
+      }
+
+      .controls h2 {
+        color: #ff4081;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+      }
+
+      .button {
+        background: linear-gradient(45deg, #ff0050, #ff4081);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        margin: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 0, 80, 0.3);
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 0, 80, 0.4);
+        background: linear-gradient(45deg, #ff4081, #ff6b9d);
+      }
+
+      .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .button.danger {
+        background: linear-gradient(45deg, #dc3545, #e74c3c);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+      }
+
+      .button.danger:hover {
+        background: linear-gradient(45deg, #e74c3c, #c0392b);
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+      }
+
+      .info-box {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 20px 0;
+        border-left: 4px solid #ff4081;
+      }
+
+      .info-box h3 {
+        color: #ff4081;
+        margin-bottom: 10px;
+      }
+
+      .info-box p {
+        opacity: 0.8;
+        line-height: 1.5;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+        border: 1px solid;
+      }
+
+      .alert.success {
+        background: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        border-color: rgba(40, 167, 69, 0.3);
+      }
+
+      .alert.error {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        border-color: rgba(220, 53, 69, 0.3);
+      }
+
+      .alert.warning {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border-color: rgba(255, 193, 7, 0.3);
+      }
+
+      .next-upload {
+        font-size: 0.9rem;
+        opacity: 0.7;
+        margin-top: 10px;
+      }
+
+      .back-link {
+        color: #ff4081;
+        text-decoration: none;
+        margin-top: 30px;
+        display: inline-block;
+      }
+
+      .back-link:hover {
+        color: #ff6b9d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎵 TTPhotos Dashboard</h1>
+      </div>
+
+      <div id="alerts"></div>
+
+      <div class="status-card">
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Checking connection...</span>
+        </div>
+        <div id="connectionDetails"></div>
+      </div>
+
+      <div class="controls">
+        <h2>Upload Control</h2>
+
+        <div id="uploadControls">
+          <button class="button" id="startButton" onclick="startUploading()">
+            🚀 Start Uploading
+          </button>
+          <button
+            class="button danger"
+            id="stopButton"
+            onclick="stopUploading()"
+            style="display: none"
+          >
+            ⏹️ Stop Uploading
+          </button>
+        </div>
+
+        <div class="info-box">
+          <h3>📋 How it works</h3>
+          <p>
+            • Uploads happen every 5 hours automatically<br />
+            • Each upload creates a photo carousel with your music<br />
+            • Daily limit: 5 uploads per 24 hours<br />
+            • You can start/stop anytime
+          </p>
+        </div>
+
+        <div id="nextUploadInfo" class="next-upload" style="display: none">
+          Next upload scheduled for: <span id="nextUploadTime"></span>
+        </div>
+      </div>
+
+      <div style="text-align: center">
+        <a href="/" class="back-link">← Back to Home</a>
+      </div>
+    </div>
+
+    <script>
+      let uploadInterval = null;
+      let nextUploadTime = null;
+
+      // Initialize dashboard
+      async function init() {
+        await checkConnection();
+        await loadUploadState();
+      }
+
+      // Check TikTok connection
+      async function checkConnection() {
+        try {
+          const response = await fetch('/api/status');
+          const data = await response.json();
+
+          const statusDot = document.getElementById('statusDot');
+          const statusText = document.getElementById('statusText');
+          const connectionDetails =
+            document.getElementById('connectionDetails');
+
+          if (data.connected) {
+            statusDot.className = 'status-dot';
+            statusText.textContent = '✅ Connected to TikTok';
+            connectionDetails.innerHTML = `
+            <p>Account: ${data.userInfo?.display_name || 'Connected'}</p>
+            <p>Daily uploads: ${data.dailyUploads || 0}/5</p>
+          `;
+          } else {
+            statusDot.className = 'status-dot error';
+            statusText.textContent = '❌ Not connected';
+            connectionDetails.innerHTML =
+              '<p>Please <a href="/login" style="color: #ff4081;">login with TikTok</a> first.</p>';
+          }
+        } catch (error) {
+          showAlert('Failed to check connection', 'error');
+        }
+      }
+
+      // Load current upload state
+      async function loadUploadState() {
+        try {
+          const response = await fetch('/api/upload-state');
+          const data = await response.json();
+
+          if (data.active) {
+            startUploadingUI();
+            if (data.nextUpload) {
+              nextUploadTime = new Date(data.nextUpload);
+              updateNextUploadDisplay();
+            }
+          } else {
+            stopUploadingUI();
+          }
+        } catch (error) {
+          console.error('Failed to load upload state:', error);
+        }
+      }
+
+      // Start uploading
+      async function startUploading() {
+        try {
+          const response = await fetch('/api/start-uploading', {
+            method: 'POST',
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            startUploadingUI();
+            showAlert(
+              'Upload scheduler started! First upload will happen immediately.',
+              'success'
+            );
+
+            // Calculate next upload time (5 hours from now)
+            nextUploadTime = new Date(Date.now() + 5 * 60 * 60 * 1000);
+            updateNextUploadDisplay();
+          } else {
+            showAlert(data.error || 'Failed to start uploading', 'error');
+          }
+        } catch (error) {
+          showAlert('Failed to start uploading', 'error');
+        }
+      }
+
+      // Stop uploading
+      async function stopUploading() {
+        try {
+          const response = await fetch('/api/stop-uploading', {
+            method: 'POST',
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            stopUploadingUI();
+            showAlert('Upload scheduler stopped.', 'success');
+          } else {
+            showAlert(data.error || 'Failed to stop uploading', 'error');
+          }
+        } catch (error) {
+          showAlert('Failed to stop uploading', 'error');
+        }
+      }
+
+      // Update UI for active state
+      function startUploadingUI() {
+        document.getElementById('startButton').style.display = 'none';
+        document.getElementById('stopButton').style.display = 'inline-block';
+        document.getElementById('nextUploadInfo').style.display = 'block';
+      }
+
+      // Update UI for inactive state
+      function stopUploadingUI() {
+        document.getElementById('startButton').style.display = 'inline-block';
+        document.getElementById('stopButton').style.display = 'none';
+        document.getElementById('nextUploadInfo').style.display = 'none';
+      }
+
+      // Update next upload time display
+      function updateNextUploadDisplay() {
+        if (nextUploadTime) {
+          const timeString = nextUploadTime.toLocaleString();
+          document.getElementById('nextUploadTime').textContent = timeString;
+        }
+      }
+
+      // Show alert message
+      function showAlert(message, type = 'info') {
+        const alertsContainer = document.getElementById('alerts');
+        const alert = document.createElement('div');
+        alert.className = `alert ${type}`;
+        alert.textContent = message;
+
+        alertsContainer.appendChild(alert);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+          }
+        }, 5000);
+      }
+
+      // Initialize when page loads
+      init();
+    </script>
+  </body>
+</html>
