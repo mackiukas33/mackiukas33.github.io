@@ -139,7 +139,7 @@ async function postCarousel(accessToken) {
     post_info: {
       title: 'TTPhotos',
       description: `🎵 ${song.name}\n#ttphotos`,
-      privacy_level: 'PUBLIC_TO_EVERYONE',
+      privacy_level: 'PRIVATE_TO_SELF',
       disable_comment: false,
       auto_add_music: true,
       brand_content_toggle: false,
