@@ -531,7 +531,7 @@ app.get('/slide', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.send(canvas.toBuffer('image/jpeg', { quality: 0.9 }));
+    res.send(canvas.toBuffer('image/jpeg'));
   } catch (e) {
     console.error('slide render error', e);
     res.status(500).send('render_error');
