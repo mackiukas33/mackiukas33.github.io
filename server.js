@@ -6,6 +6,7 @@ import qs from 'qs';
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import { getRandomHashtags, getRandomTitle } from './public/data/hashtags.js';
 import { songs } from './public/data/songs.js';
+import { MongoClient } from 'mongodb';
 
 import dotenv from 'dotenv';
 
@@ -15,7 +16,46 @@ const PORT = process.env.PORT || 3000;
 let lastAccessToken = null; // store latest token in-memory for status checks
 let uploadInterval = null; // store interval for scheduled uploads
 let isUploading = false; // track upload state
+let db = null; // MongoDB database connection
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// MongoDB connection
+async function connectDB() {
+  if (db) return db;
+
+  const client = new MongoClient(
+    process.env.MONGODB_URI || 'mongodb://localhost:27017'
+  );
+  await client.connect();
+  db = client.db('ttphotos');
+  return db;
+}
+
+// Database functions
+async function saveUploadState(isActive, token = null) {
+  const database = await connectDB();
+  const collection = database.collection('uploadState');
+
+  await collection.updateOne(
+    { _id: 'main' },
+    {
+      $set: {
+        isUploading: isActive,
+        accessToken: token,
+        lastUpdated: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+}
+
+async function getUploadState() {
+  const database = await connectDB();
+  const collection = database.collection('uploadState');
+
+  const state = await collection.findOne({ _id: 'main' });
+  return state || { isUploading: false, accessToken: null };
+}
 
 // TikTok sandbox credentials
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -78,23 +118,26 @@ app.post('/upload', async (req, res) => {
     }, 5 * 60 * 60 * 1000);
 
     isUploading = true;
+    await saveUploadState(true, lastAccessToken);
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/stop', (req, res) => {
+app.post('/stop', async (req, res) => {
   if (uploadInterval) {
     clearInterval(uploadInterval);
     uploadInterval = null;
   }
   isUploading = false;
+  await saveUploadState(false);
   res.json({ success: true });
 });
 
-app.get('/status', (req, res) => {
-  res.json({ isUploading });
+app.get('/status', async (req, res) => {
+  const state = await getUploadState();
+  res.json({ isUploading: state.isUploading });
 });
 
 app.get('/login', (req, res) => {
@@ -515,7 +558,34 @@ app.get('/slide', async (req, res) => {
     res.status(500).send('render_error');
   }
 });
+// Startup function to restore upload state
+async function startup() {
+  try {
+    const state = await getUploadState();
+    if (state.isUploading && state.accessToken) {
+      lastAccessToken = state.accessToken;
+      isUploading = true;
+
+      // Restart the upload interval
+      uploadInterval = setInterval(async () => {
+        try {
+          await postCarousel(lastAccessToken);
+        } catch (error) {
+          console.error('Scheduled upload failed:', error.message);
+        }
+      }, 5 * 60 * 60 * 1000);
+
+      console.log('Restored upload state from database');
+    }
+  } catch (error) {
+    console.error('Failed to restore upload state:', error.message);
+  }
+}
+
 // -------------------
 // Start server
 // -------------------
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await startup();
+});
