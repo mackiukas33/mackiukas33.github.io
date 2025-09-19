@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import qs from 'qs';
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import { getRandomHashtags, getRandomTitle } from './public/data/hashtags.js';
+import { songs } from './public/data/songs';
 
 import dotenv from 'dotenv';
 
@@ -136,52 +138,6 @@ app.get('/callback', async (req, res) => {
 // -------------------
 // Carousel Posting (sandbox-safe)
 // -------------------
-const songs = [
-  {
-    id: 'MUSIC_ID_1',
-    name: 'prod.push, Poley More - MORE TME',
-    lyrics: `And I already heard what you said already, 
-You ain't even pause already
-Late night talks already...
-Troubles got u on, don't know where to go
-So you lost already
-Yeah,
-Saying I ain't did you right
-So tell me what you like
-Don't try me
-`,
-  },
-  {
-    id: 'MUSIC_ID_2',
-    name: 'Poley More - Nowhere To Be Found',
-    lyrics: `‘Cause i loved you with my eyes closed
-Take off my blindfold
-My heart is ice cold now
-You left me stranded
-And took my heart for granted
-And now you’re nowhere to be found`,
-  },
-  {
-    id: 'MUSIC_ID_3',
-    name: 'prod.push, Poley More - HAPPY ANNIVERSARY',
-    lyrics: `Thats my shawty knowing all the facts
-She wont get attached
-Breaking all the rules she thought i won't last
-She saw me, we ain't speaking
-she just want it back
-Running round in circles
-there's no coming back
-thats how you do.
-
-Gifts and all designers 
-if you wanted these - that’s for you 
-When you ready - come 
-ama set a table just for two.
-Miss the time we spent 
-right under the moon.
-Just me and you, me and you`,
-  },
-];
 
 async function postCarousel(accessToken) {
   // Use dynamically generated slides with requested texts
@@ -208,13 +164,18 @@ async function postCarousel(accessToken) {
       song.lyrics
     )}&bg=${encodeURIComponent(bg3)}`,
   ];
+  // Get random catchy title and trending hashtags
+  const title = getRandomTitle();
+  const hashtags = getRandomHashtags(8).join(' ');
+
   const payload = {
     media_type: 'PHOTO',
-    post_mode: 'MEDIA_UPLOAD', // or keep 'DIRECT_POST'
+    post_mode: 'DIRECT_POST',
     post_info: {
-      title: 'Test',
-      description: `🎵 ${song.name}\n#ttphotos`,
-      privacy_level: 'SELF_ONLY', // use this exact value
+      caption: `${title}\n\n🎵 ${song.name}\n\n${hashtags}`,
+      privacy_level: 'SELF_ONLY',
+      disable_comment: false,
+      auto_add_music: true,
     },
     source_info: {
       source: 'PULL_FROM_URL',
@@ -273,46 +234,6 @@ app.get('/publish-status', async (req, res) => {
     res.status(500).json(e.response?.data || { error: e.message });
   }
 });
-
-// -------------------
-// Dynamic slide renderer
-// -------------------
-function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, options = {}) {
-  const paragraphs = String(text).split(/\r?\n/);
-  let cursorY = y;
-  const align = options.align || 'left'; // 'left' | 'center'
-  const doStroke = options.stroke === true;
-
-  for (let p = 0; p < paragraphs.length; p++) {
-    const words = paragraphs[p].split(/\s+/);
-    let line = '';
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line.length ? line + ' ' + words[i] : words[i];
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && i > 0) {
-        const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
-        const drawX = align === 'center' ? x - renderWidth / 2 : x;
-        if (doStroke) ctx.strokeText(line, drawX, cursorY);
-        ctx.fillText(line, drawX, cursorY);
-        line = words[i];
-        cursorY += lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    if (line) {
-      const renderWidth = Math.min(ctx.measureText(line).width, maxWidth);
-      const drawX = align === 'center' ? x - renderWidth / 2 : x;
-      if (doStroke) ctx.strokeText(line, drawX, cursorY);
-      ctx.fillText(line, drawX, cursorY);
-    }
-    // Extra advance between paragraphs except after last
-    if (p < paragraphs.length - 1) {
-      cursorY += lineHeight;
-    }
-  }
-  return cursorY; // last baseline used
-}
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
   const radius = Math.min(r, w / 2, h / 2);
@@ -455,7 +376,7 @@ app.get('/slide', async (req, res) => {
         );
         const gemSize = 120;
         const gx = (width - gemSize) / 2;
-        const gy = 130;
+        const gy = 156; // lowered by 20% (130 * 1.2)
         ctx.drawImage(gem, gx, gy, gemSize, gemSize);
       } catch {}
     }
