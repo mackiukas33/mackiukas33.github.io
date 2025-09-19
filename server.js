@@ -168,7 +168,7 @@ async function postCarousel(accessToken) {
   ];
   // Get random catchy title and trending hashtags
   const title = getRandomTitle();
-  const hashtags = getRandomHashtags(8).join(' ');
+  const hashtags = getRandomHashtags(5).join(' ');
 
   const payload = {
     media_type: 'PHOTO',
@@ -379,7 +379,7 @@ app.get('/slide', async (req, res) => {
         );
         const gemSize = 120;
         const gx = (width - gemSize) / 2;
-        const gy = 156; // lowered by 20% (130 * 1.2)
+        const gy = 180;
         ctx.drawImage(gem, gx, gy, gemSize, gemSize);
       } catch {}
     }
@@ -446,8 +446,8 @@ app.get('/slide', async (req, res) => {
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
     ctx.strokeStyle = '#000000';
-    ctx.strokeText('Follow for more underrated gems', width / 2, height - 160);
-    ctx.fillText('Follow for more underrated gems', width / 2, height - 160);
+    ctx.strokeText('Follow for more underrated gems', width / 2, height - 180);
+    ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
     // Prevent CDN/browser caching so previews can change each load
