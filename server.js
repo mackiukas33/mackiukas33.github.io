@@ -170,7 +170,7 @@ async function postCarousel(accessToken) {
 
   const payload = {
     media_type: 'PHOTO',
-    post_mode: 'DIRECT_POST',
+    post_mode: 'MEDIA_UPLOAD',
     post_info: {
       caption: `${title}\n\n🎵 ${song.name}\n\n${hashtags}`,
       privacy_level: 'SELF_ONLY',
