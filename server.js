@@ -3,7 +3,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import qs from 'qs';
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 
 import dotenv from 'dotenv';
 
@@ -21,6 +21,24 @@ const REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI;
 
 // Serve static photos
 app.use(express.static('public'));
+
+// Register bundled fonts for serverless (e.g., Vercel) where system fonts are absent
+try {
+  const fontsDir = path.join(process.cwd(), 'public', 'fonts');
+  GlobalFonts.registerFromPath(
+    path.join(fontsDir, 'Inter-Regular.ttf'),
+    'Inter'
+  );
+  GlobalFonts.registerFromPath(
+    path.join(fontsDir, 'Inter-Bold.ttf'),
+    'InterBold'
+  );
+} catch (e) {
+  console.warn(
+    'Font registration failed; ensure TTFs exist under public/fonts/',
+    e.message || e
+  );
+}
 
 app.get('/', (req, res) => {
   res.send(`
@@ -296,7 +314,9 @@ app.get('/slide', async (req, res) => {
     const maxTextWidth = width - margin * 2;
 
     // Draw title (centered)
-    ctx.font = 'bold 108px sans-serif';
+    ctx.font = GlobalFonts.has('InterBold')
+      ? '108px InterBold'
+      : 'bold 108px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
@@ -307,7 +327,9 @@ app.get('/slide', async (req, res) => {
     if (body) {
       if (variant === 'song') {
         // Emphasize song name
-        ctx.font = 'bold 88px sans-serif';
+        ctx.font = GlobalFonts.has('InterBold')
+          ? '88px InterBold'
+          : 'bold 88px sans-serif';
         ctx.fillStyle = '#FFCC00';
         const startY = titleY + 180;
         const songLineHeight = 100;
@@ -333,7 +355,7 @@ app.get('/slide', async (req, res) => {
         ctx.globalAlpha = 1;
 
         // Lyrics text
-        ctx.font = '64px sans-serif';
+        ctx.font = GlobalFonts.has('Inter') ? '64px Inter' : '64px sans-serif';
         ctx.fillStyle = '#FFFFFF';
         const lineHeight = 78;
         const innerPad = 40;
@@ -349,7 +371,7 @@ app.get('/slide', async (req, res) => {
     }
 
     // Footer CTA
-    ctx.font = '48px sans-serif';
+    ctx.font = GlobalFonts.has('Inter') ? '48px Inter' : '48px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.textAlign = 'center';
     ctx.fillText('Tap to listen and follow for more', width / 2, height - 160);
