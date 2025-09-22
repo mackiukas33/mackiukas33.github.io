@@ -84,6 +84,8 @@ export async function GET(request: NextRequest) {
         ? searchParams.get('lyrics')
         : '';
 
+    // Ignore bg parameter - always use random background like original
+
     const width = 1080;
     const height = 1920;
     const canvas = createCanvas(width, height);

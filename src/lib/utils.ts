@@ -36,16 +36,13 @@ export function generateImageUrls(
   bgFiles: string[],
   song: Song
 ): string[] {
-  const [bg1, bg2, bg3] = bgFiles;
-
+  // Remove bg parameters since /slide endpoint uses random backgrounds
   return [
-    `${baseUrl}/api/slide?variant=intro&bg=${encodeURIComponent(bg1)}`,
-    `${baseUrl}/api/slide?variant=song&song=${encodeURIComponent(
-      song.name
-    )}&bg=${encodeURIComponent(bg2)}`,
+    `${baseUrl}/api/slide?variant=intro`,
+    `${baseUrl}/api/slide?variant=song&song=${encodeURIComponent(song.name)}`,
     `${baseUrl}/api/slide?variant=lyrics&lyrics=${encodeURIComponent(
       song.lyrics
-    )}&bg=${encodeURIComponent(bg3)}`,
+    )}`,
   ];
 }
 
