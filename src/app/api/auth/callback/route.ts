@@ -54,10 +54,10 @@ export async function GET(request: NextRequest) {
     console.log('Posting carousel to TikTok...');
     let publish: any;
     let statusChecks: TikTokPublishStatus[] = [];
-    
+
     try {
       publish = await postCarousel(accessToken);
-      
+
       // Poll publish status
       const publishId = publish.api?.data?.publish_id;
       if (publishId) {
@@ -92,7 +92,11 @@ export async function GET(request: NextRequest) {
         });
       }
     } catch (e: any) {
-      console.error('Carousel posting failed:', e.response?.status, e.response?.data || e.message);
+      console.error(
+        'Carousel posting failed:',
+        e.response?.status,
+        e.response?.data || e.message
+      );
       statusChecks.push({
         data: {
           status: 'FAILED' as const,
@@ -100,7 +104,8 @@ export async function GET(request: NextRequest) {
         },
         error: {
           code: 'POSTING_ERROR',
-          message: e.response?.data?.message || e.message || 'Unknown posting error',
+          message:
+            e.response?.data?.message || e.message || 'Unknown posting error',
         },
       });
     }
@@ -186,7 +191,11 @@ async function postCarousel(accessToken: string) {
     console.log('TikTok API response:', resp.data);
     return { api: resp.data, imageUrls };
   } catch (error: any) {
-    console.error('TikTok posting error:', error.response?.status, error.response?.data);
+    console.error(
+      'TikTok posting error:',
+      error.response?.status,
+      error.response?.data
+    );
     throw error;
   }
 }
