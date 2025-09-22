@@ -86,13 +86,8 @@ export async function GET(request: NextRequest) {
 
     const width = 1080;
     const height = 1920;
-    // Create high-DPI canvas for better quality
-    const scale = 2; // 2x resolution for crisp rendering
-    const canvas = createCanvas(width * scale, height * scale);
+    const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
-
-    // Scale the context to match the canvas size
-    ctx.scale(scale, scale);
 
     // Background: always pick a random photo; fallback to gradient if none
     try {
@@ -109,24 +104,17 @@ export async function GET(request: NextRequest) {
         const canvasRatio = width / height;
         let drawW, drawH, dx, dy;
 
-        // Use cover mode to fill the canvas without distortion
         if (imgRatio > canvasRatio) {
-          // Image is wider - crop sides
-          drawW = width;
-          drawH = width / imgRatio;
-          dx = 0;
-          dy = (height - drawH) / 2;
-        } else {
-          // Image is taller - crop top/bottom
           drawH = height;
           drawW = height * imgRatio;
           dx = (width - drawW) / 2;
           dy = 0;
+        } else {
+          drawW = width;
+          drawH = width / imgRatio;
+          dx = 0;
+          dy = (height - drawH) / 2;
         }
-
-        // Enable high-quality image smoothing
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, dx, dy, drawW, drawH);
       } else {
         const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -159,13 +147,11 @@ export async function GET(request: NextRequest) {
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
-    // Text style with better rendering
+    // Text style
     ctx.fillStyle = '#FFFFFF';
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 12;
-    ctx.textRenderingOptimization = 'optimizeQuality';
-    ctx.fontKerning = 'normal';
 
     let title = '';
     let body = '';
