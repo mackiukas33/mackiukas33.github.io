@@ -108,6 +108,9 @@ export async function GET(request: NextRequest) {
           dx = 0;
           dy = (height - drawH) / 2;
         }
+        // Enable image smoothing for better quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, dx, dy, drawW, drawH);
       } else {
         const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -248,7 +251,7 @@ export async function GET(request: NextRequest) {
     ctx.textAlign = 'left';
 
     // Prevent CDN/browser caching so previews can change each load
-    const buffer = canvas.toBuffer('image/jpeg', 0.9);
+    const buffer = canvas.toBuffer('image/jpeg', 0.95);
 
     return new NextResponse(buffer as any, {
       headers: {
