@@ -86,8 +86,13 @@ export async function GET(request: NextRequest) {
 
     const width = 1080;
     const height = 1920;
-    const canvas = createCanvas(width, height);
+    // Create high-DPI canvas for better quality
+    const scale = 2; // 2x resolution for crisp rendering
+    const canvas = createCanvas(width * scale, height * scale);
     const ctx = canvas.getContext('2d');
+
+    // Scale the context to match the canvas size
+    ctx.scale(scale, scale);
 
     // Background: always pick a random photo; fallback to gradient if none
     try {
@@ -103,18 +108,23 @@ export async function GET(request: NextRequest) {
         const imgRatio = img.width / img.height;
         const canvasRatio = width / height;
         let drawW, drawH, dx, dy;
+
+        // Use cover mode to fill the canvas without distortion
         if (imgRatio > canvasRatio) {
-          drawH = height;
-          drawW = height * imgRatio;
-          dx = (width - drawW) / 2;
-          dy = 0;
-        } else {
+          // Image is wider - crop sides
           drawW = width;
           drawH = width / imgRatio;
           dx = 0;
           dy = (height - drawH) / 2;
+        } else {
+          // Image is taller - crop top/bottom
+          drawH = height;
+          drawW = height * imgRatio;
+          dx = (width - drawW) / 2;
+          dy = 0;
         }
-        // Enable image smoothing for better quality
+
+        // Enable high-quality image smoothing
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, dx, dy, drawW, drawH);
@@ -149,11 +159,13 @@ export async function GET(request: NextRequest) {
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
-    // Text style
+    // Text style with better rendering
     ctx.fillStyle = '#FFFFFF';
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 12;
+    ctx.textRenderingOptimization = 'optimizeQuality';
+    ctx.fontKerning = 'normal';
 
     let title = '';
     let body = '';
