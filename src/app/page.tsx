@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleLogin = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('/api/auth/login')
-      const data = await response.json()
+      const response = await fetch('/api/auth/login');
+      const data = await response.json();
 
       if (response.ok && data.authUrl) {
         // Redirect to TikTok OAuth
-        window.location.href = data.authUrl
+        window.location.href = data.authUrl;
       } else {
-        setError(data.error || 'Login failed')
-        setIsLoading(false)
+        setError(data.error || 'Login failed');
+        setIsLoading(false);
       }
     } catch (err) {
-      setError('Network error occurred')
-      setIsLoading(false)
+      setError('Network error occurred');
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -41,9 +41,7 @@ export default function Home() {
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl font-bold text-white mb-2">
-            TTPhotos
-          </h1>
+          <h1 className="text-3xl font-bold text-white mb-2">TTPhotos</h1>
           <p className="text-white/80 mb-8">
             Create and post beautiful TikTok carousels with your music
           </p>
@@ -94,5 +92,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  )
+  );
 }
