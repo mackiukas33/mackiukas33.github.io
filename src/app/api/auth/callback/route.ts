@@ -52,16 +52,20 @@ export async function GET(request: NextRequest) {
 
     // Post carousel to TikTok
     console.log('Posting carousel to TikTok...');
-    const publish = await postCarousel(accessToken);
-
-    // Poll publish status
-    const statusChecks: TikTokPublishStatus[] = [];
+    let publish: any;
+    let statusChecks: TikTokPublishStatus[] = [];
+    
     try {
+      publish = await postCarousel(accessToken);
+      
+      // Poll publish status
       const publishId = publish.api?.data?.publish_id;
       if (publishId) {
+        console.log('Publish ID:', publishId);
         for (let i = 0; i < 4; i++) {
           const status = await getPublishStatus(accessToken, publishId);
           statusChecks.push(status);
+          console.log(`Status check ${i + 1}:`, status);
 
           // Stop early if status indicates completion
           const statusType = status?.data?.status;
@@ -69,20 +73,34 @@ export async function GET(request: NextRequest) {
             statusType &&
             ['PUBLISHED', 'FAILED', 'CANCELLED'].includes(statusType)
           ) {
+            console.log('Final status:', statusType);
             break;
           }
           await sleep(2000);
         }
+      } else {
+        console.log('No publish ID received from TikTok API');
+        statusChecks.push({
+          data: {
+            status: 'FAILED' as const,
+            publish_id: 'unknown',
+          },
+          error: {
+            code: 'NO_PUBLISH_ID',
+            message: 'TikTok API did not return a publish ID',
+          },
+        });
       }
     } catch (e: any) {
+      console.error('Carousel posting failed:', e.response?.status, e.response?.data || e.message);
       statusChecks.push({
         data: {
           status: 'FAILED' as const,
           publish_id: 'unknown',
         },
         error: {
-          code: 'STATUS_CHECK_ERROR',
-          message: e.response?.data?.message || e.message,
+          code: 'POSTING_ERROR',
+          message: e.response?.data?.message || e.message || 'Unknown posting error',
         },
       });
     }
@@ -150,18 +168,27 @@ async function postCarousel(accessToken: string) {
 
   const payload = createCarouselPayload(title, song, hashtags, imageUrls);
 
-  const resp = await axios.post(
-    'https://open.tiktokapis.com/v2/post/publish/content/init/',
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-    }
-  );
+  console.log('Posting carousel to TikTok API...');
+  console.log('Carousel payload:', JSON.stringify(payload, null, 2));
 
-  return { api: resp.data, imageUrls };
+  try {
+    const resp = await axios.post(
+      'https://open.tiktokapis.com/v2/post/publish/content/init/',
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      }
+    );
+
+    console.log('TikTok API response:', resp.data);
+    return { api: resp.data, imageUrls };
+  } catch (error: any) {
+    console.error('TikTok posting error:', error.response?.status, error.response?.data);
+    throw error;
+  }
 }
 
 async function generatePreviewImages() {
