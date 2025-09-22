@@ -11,19 +11,20 @@ export default function Home() {
   const handleLogin = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const response = await fetch('/api/auth/login')
-      if (response.ok) {
-        // The login route redirects to TikTok, so this will redirect the user
-        window.location.href = '/api/auth/login'
+      const data = await response.json()
+
+      if (response.ok && data.authUrl) {
+        // Redirect to TikTok OAuth
+        window.location.href = data.authUrl
       } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Login failed')
+        setError(data.error || 'Login failed')
+        setIsLoading(false)
       }
     } catch (err) {
       setError('Network error occurred')
-    } finally {
       setIsLoading(false)
     }
   }

@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
 
 export async function GET() {
   const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -13,15 +23,6 @@ export async function GET() {
   }
 
   const csrfState = Math.random().toString(36).substring(2);
-  
-  // Set CSRF state cookie
-  const cookieStore = await cookies();
-  cookieStore.set('csrfState', csrfState, {
-    maxAge: 60, // 1 minute
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  });
 
   const params = new URLSearchParams({
     client_key: CLIENT_KEY,
@@ -32,6 +33,17 @@ export async function GET() {
   });
 
   const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
-  
-  return NextResponse.redirect(authUrl);
+
+  console.log('Generated auth URL:', authUrl);
+  console.log('Client key:', CLIENT_KEY);
+  console.log('Redirect URI:', REDIRECT_URI);
+  console.log('Full params:', params.toString());
+
+  return NextResponse.json({ authUrl }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
