@@ -107,7 +107,12 @@ export async function GET(request: NextRequest) {
 async function postCarousel(accessToken: string) {
   const song = getRandomSong(songs);
   const photoFiles = getRandomPhotoFiles();
-  const imageUrls = generateImageUrls(BASE_URL, photoFiles, song);
+  // Use the verified domain for image URLs
+  const imageUrls = generateImageUrls(
+    'https://ttphotos.online',
+    photoFiles,
+    song
+  );
   const { title, hashtags } = generatePostContent();
 
   const payload = createCarouselPayload(title, song, hashtags, imageUrls);
