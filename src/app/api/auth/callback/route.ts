@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenRes.data.access_token;
 
-    const publish = await postCarousel(accessToken);
+    // Skip TikTok posting for now - just generate images for preview
+    // const publish = await postCarousel(accessToken);
 
     // Poll publish status
     // const statusChecks: TikTokPublishStatus[] = [];
@@ -101,6 +102,19 @@ export async function GET(request: NextRequest) {
     // Redirect to success page with image data
     const successUrl = new URL('/success', BASE_URL);
     successUrl.searchParams.set('generated', 'true');
+    successUrl.searchParams.set('title', encodeURIComponent(imageData.title));
+    successUrl.searchParams.set('song', encodeURIComponent(imageData.song));
+    successUrl.searchParams.set(
+      'hashtags',
+      encodeURIComponent(
+        Array.isArray(imageData.hashtags)
+          ? imageData.hashtags.join(' ')
+          : imageData.hashtags
+      )
+    );
+    successUrl.searchParams.set('intro_url', imageData.imageUrls[0]);
+    successUrl.searchParams.set('song_url', imageData.imageUrls[1]);
+    successUrl.searchParams.set('lyrics_url', imageData.imageUrls[2]);
 
     return NextResponse.redirect(successUrl);
   } catch (err: any) {

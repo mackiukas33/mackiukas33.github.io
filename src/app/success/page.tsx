@@ -28,40 +28,84 @@ function SuccessContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const generateImages = async () => {
-      try {
-        // Always generate fresh images for preview
-        const response = await fetch('/api/slide?variant=intro');
-        if (response.ok) {
-          setResult({
-            token: {},
-            images: {
-              title: 'Fresh Post',
-              song: 'Random Song',
-              hashtags: '#music #trending #viral #fyp',
-              imageUrls: [
-                '/api/slide?variant=intro',
-                '/api/slide?variant=song&song=Random Song',
-                '/api/slide?variant=lyrics&lyrics=Random lyrics from our collection...',
-              ],
-              variants: [
-                { variant: 'intro', url: '/api/slide?variant=intro', description: 'Intro slide' },
-                { variant: 'song', url: '/api/slide?variant=song&song=Random Song', description: 'Song title slide' },
-                { variant: 'lyrics', url: '/api/slide?variant=lyrics&lyrics=Random lyrics from our collection...', description: 'Lyrics slide' },
-              ],
-            },
-            message: 'Beautiful images generated successfully!',
-          });
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Get data from URL params (from OAuth callback) or use demo data
+    const isGenerated = searchParams.get('generated') === 'true';
 
-    generateImages();
-  }, []);
+    if (isGenerated) {
+      // Use actual generated data from callback
+      const title = searchParams.get('title') || 'Generated Post';
+      const song = searchParams.get('song') || 'Unknown Song';
+      const hashtags = searchParams.get('hashtags') || '#music #trending';
+      const introUrl =
+        searchParams.get('intro_url') || '/api/slide?variant=intro';
+      const songUrl = searchParams.get('song_url') || '/api/slide?variant=song';
+      const lyricsUrl =
+        searchParams.get('lyrics_url') || '/api/slide?variant=lyrics';
+
+      setResult({
+        token: {},
+        images: {
+          title,
+          song,
+          hashtags,
+          imageUrls: [introUrl, songUrl, lyricsUrl],
+          variants: [
+            {
+              variant: 'intro',
+              url: introUrl,
+              description: 'Intro slide',
+            },
+            {
+              variant: 'song',
+              url: songUrl,
+              description: 'Song title slide',
+            },
+            {
+              variant: 'lyrics',
+              url: lyricsUrl,
+              description: 'Lyrics slide',
+            },
+          ],
+        },
+        message: 'Beautiful images generated successfully!',
+      });
+    } else {
+      // Use demo data for direct access
+      setResult({
+        token: {},
+        images: {
+          title: 'Demo Post',
+          song: 'Sample Song',
+          hashtags: '#music #trending #viral #fyp',
+          imageUrls: [
+            '/api/slide?variant=intro',
+            '/api/slide?variant=song&song=Sample Song',
+            '/api/slide?variant=lyrics&lyrics=Sample lyrics from our collection...',
+          ],
+          variants: [
+            {
+              variant: 'intro',
+              url: '/api/slide?variant=intro',
+              description: 'Intro slide',
+            },
+            {
+              variant: 'song',
+              url: '/api/slide?variant=song&song=Sample Song',
+              description: 'Song title slide',
+            },
+            {
+              variant: 'lyrics',
+              url: '/api/slide?variant=lyrics&lyrics=Sample lyrics from our collection...',
+              description: 'Lyrics slide',
+            },
+          ],
+        },
+        message: 'Demo images - try the OAuth flow for real generation!',
+      });
+    }
+
+    setLoading(false);
+  }, [searchParams]);
 
   if (loading) {
     return (
@@ -69,8 +113,12 @@ function SuccessContent() {
         <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
           <div className="text-center">
             <div className="w-12 h-12 mx-auto border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
-            <h1 className="text-xl font-bold text-white">Generating Images...</h1>
-            <p className="text-white/80 mt-2">Creating your beautiful carousel slides</p>
+            <h1 className="text-xl font-bold text-white">
+              Generating Images...
+            </h1>
+            <p className="text-white/80 mt-2">
+              Creating your beautiful carousel slides
+            </p>
           </div>
         </div>
       </div>
@@ -83,7 +131,9 @@ function SuccessContent() {
         <div className="max-w-md w-full bg-red-500/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
           <div className="text-center">
             <div className="text-6xl mb-4">❌</div>
-            <h1 className="text-2xl font-bold text-white mb-4">Generation Failed</h1>
+            <h1 className="text-2xl font-bold text-white mb-4">
+              Generation Failed
+            </h1>
             <p className="text-white/80 mb-6">{error}</p>
             <button
               onClick={() => (window.location.href = '/')}
@@ -118,16 +168,26 @@ function SuccessContent() {
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
               <div>
-                <h3 className="text-white/80 text-sm font-medium mb-2">Title</h3>
-                <p className="text-white font-semibold">{result.images.title}</p>
+                <h3 className="text-white/80 text-sm font-medium mb-2">
+                  Title
+                </h3>
+                <p className="text-white font-semibold">
+                  {result.images.title}
+                </p>
               </div>
               <div>
                 <h3 className="text-white/80 text-sm font-medium mb-2">Song</h3>
-                <p className="text-white font-semibold">🎵 {result.images.song}</p>
+                <p className="text-white font-semibold">
+                  🎵 {result.images.song}
+                </p>
               </div>
               <div>
-                <h3 className="text-white/80 text-sm font-medium mb-2">Hashtags</h3>
-                <p className="text-white font-semibold text-sm">{result.images.hashtags}</p>
+                <h3 className="text-white/80 text-sm font-medium mb-2">
+                  Hashtags
+                </h3>
+                <p className="text-white font-semibold text-sm">
+                  {result.images.hashtags}
+                </p>
               </div>
             </div>
           </div>
@@ -136,10 +196,15 @@ function SuccessContent() {
         {/* Image Gallery */}
         {result?.images?.variants && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">Generated Slides</h2>
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">
+              Generated Slides
+            </h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {result.images.variants.map((variant, index) => (
-                <div key={index} className="bg-white/10 backdrop-blur-lg rounded-2xl p-6">
+                <div
+                  key={index}
+                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6"
+                >
                   <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold text-white mb-2">
                       {variant.description}
@@ -148,7 +213,7 @@ function SuccessContent() {
                       {variant.variant.toUpperCase()}
                     </div>
                   </div>
-                  
+
                   {/* Image Container */}
                   <div className="relative group">
                     <div className="aspect-[9/16] bg-black/20 rounded-xl overflow-hidden shadow-2xl">
@@ -173,7 +238,7 @@ function SuccessContent() {
                         }}
                       />
                     </div>
-                    
+
                     {/* Overlay on hover */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center">
                       <button
@@ -202,7 +267,9 @@ function SuccessContent() {
             onClick={() => {
               // Copy all image URLs to clipboard
               if (result?.images?.imageUrls) {
-                navigator.clipboard.writeText(result.images.imageUrls.join('\n'));
+                navigator.clipboard.writeText(
+                  result.images.imageUrls.join('\n')
+                );
                 alert('Image URLs copied to clipboard!');
               }
             }}
