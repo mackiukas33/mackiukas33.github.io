@@ -84,14 +84,23 @@ export async function GET(request: NextRequest) {
         ? searchParams.get('lyrics')
         : '';
 
-    // Ignore bg parameter - always use random background like original
-
+    // HIGH QUALITY CANVAS SETUP
     const width = 1080;
     const height = 1920;
-    const canvas = createCanvas(width, height);
+    
+    // Create high-DPI canvas for crisp rendering
+    const scale = 2; // 2x scale for retina quality
+    const canvas = createCanvas(width * scale, height * scale);
     const ctx = canvas.getContext('2d');
+    
+    // Enable high-quality rendering
+    ctx.scale(scale, scale);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.textRenderingOptimization = 'optimizeQuality';
+    ctx.fontKerning = 'normal';
 
-    // Background: always pick a random photo; fallback to gradient if none
+    // HIGH QUALITY BACKGROUND RENDERING
     try {
       const photosDir = path.join(process.cwd(), 'public/photos');
       const files = fs
@@ -99,26 +108,36 @@ export async function GET(request: NextRequest) {
         .filter(
           (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
         );
+      
       if (files.length > 0) {
         const randomBg = files[Math.floor(Math.random() * files.length)];
         const img = await loadImage(path.join(photosDir, randomBg));
+        
+        // Use COVER mode for best quality - fill entire canvas
         const imgRatio = img.width / img.height;
         const canvasRatio = width / height;
-        let drawW, drawH, dx, dy;
-
+        
+        let sourceX = 0, sourceY = 0, sourceW = img.width, sourceH = img.height;
+        let destX = 0, destY = 0, destW = width, destH = height;
+        
         if (imgRatio > canvasRatio) {
-          drawH = height;
-          drawW = height * imgRatio;
-          dx = (width - drawW) / 2;
-          dy = 0;
+          // Image is wider - crop sides
+          sourceW = img.height * canvasRatio;
+          sourceX = (img.width - sourceW) / 2;
         } else {
-          drawW = width;
-          drawH = width / imgRatio;
-          dx = 0;
-          dy = (height - drawH) / 2;
+          // Image is taller - crop top/bottom
+          sourceH = img.width / canvasRatio;
+          sourceY = (img.height - sourceH) / 2;
         }
-        ctx.drawImage(img, dx, dy, drawW, drawH);
+        
+        // Draw with perfect scaling
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceW, sourceH,  // Source rectangle
+          destX, destY, destW, destH           // Destination rectangle
+        );
       } else {
+        // Fallback gradient
         const grad = ctx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#0f0c29');
         grad.addColorStop(0.5, '#302b63');
@@ -126,7 +145,9 @@ export async function GET(request: NextRequest) {
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, width, height);
       }
-    } catch {
+    } catch (error) {
+      console.error('Background loading error:', error);
+      // Fallback gradient
       const grad = ctx.createLinearGradient(0, 0, 0, height);
       grad.addColorStop(0, '#0f0c29');
       grad.addColorStop(0.5, '#302b63');
@@ -190,24 +211,37 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // Draw title (centered). Reduced ~30%
-    ctx.font = GlobalFonts.has('InterBold')
-      ? '68px InterBold'
-      : 'bold 68px sans-serif';
-    const titleMetrics = ctx.measureText(title);
-    const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
-    const titleX = (width - titleRenderWidth) / 2;
-    let titleY = 220;
-    if (variant === 'intro' || variant === 'song') {
-      titleY = Math.floor((height - 68) / 2);
-    } else if (variant === 'lyrics') {
-      titleY = 300;
-    }
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = '#000000';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeText(title, titleX, titleY);
-    ctx.fillText(title, titleX, titleY);
+      // HIGH QUALITY TEXT RENDERING
+      ctx.font = GlobalFonts.has('InterBold')
+        ? '68px InterBold'
+        : 'bold 68px sans-serif';
+      
+      const titleMetrics = ctx.measureText(title);
+      const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
+      const titleX = (width - titleRenderWidth) / 2;
+      let titleY = 220;
+      
+      if (variant === 'intro' || variant === 'song') {
+        titleY = Math.floor((height - 68) / 2);
+      } else if (variant === 'lyrics') {
+        titleY = 300;
+      }
+      
+      // High quality text with better stroke
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#000000';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      ctx.strokeText(title, titleX, titleY);
+      ctx.fillText(title, titleX, titleY);
+      
+      // Reset shadow for other elements
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 12;
 
     // Draw body/wrapped lyrics
     if (body) {
@@ -230,19 +264,26 @@ export async function GET(request: NextRequest) {
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Draw centered lyrics
-        ctx.fillStyle = '#FFFFFF';
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = '#000000';
-        ctx.textAlign = 'center';
-        const startY = panelY + Math.floor((panelH - totalHeight) / 2);
-        const centerX = panelX + Math.floor(panelW / 2);
-        for (let i = 0; i < lines.length; i++) {
-          const y = startY + i * lineHeight;
-          ctx.strokeText(lines[i], centerX, y);
-          ctx.fillText(lines[i], centerX, y);
-        }
-        ctx.textAlign = 'left';
+          // HIGH QUALITY LYRICS RENDERING
+          ctx.fillStyle = '#FFFFFF';
+          ctx.lineWidth = 8;
+          ctx.strokeStyle = '#000000';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0,0,0,0.9)';
+          ctx.shadowBlur = 14;
+          
+          const startY = panelY + Math.floor((panelH - totalHeight) / 2);
+          const centerX = panelX + Math.floor(panelW / 2);
+          
+          for (let i = 0; i < lines.length; i++) {
+            const y = startY + i * lineHeight;
+            ctx.strokeText(lines[i], centerX, y);
+            ctx.fillText(lines[i], centerX, y);
+          }
+          
+          ctx.textAlign = 'left';
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = 12;
       }
     }
 
@@ -256,17 +297,17 @@ export async function GET(request: NextRequest) {
     ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
-    // Prevent CDN/browser caching so previews can change each load
-    const buffer = canvas.toBuffer('image/jpeg', 0.95);
+      // HIGH QUALITY OUTPUT - PNG for maximum quality
+      const buffer = canvas.toBuffer('image/png');
 
-    return new NextResponse(buffer as any, {
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-        Pragma: 'no-cache',
-        Expires: '0',
-      },
-    });
+      return new NextResponse(buffer as any, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      });
   } catch (e: any) {
     console.error('slide render error', e);
     return NextResponse.json({ error: 'render_error' }, { status: 500 });
