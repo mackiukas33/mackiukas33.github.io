@@ -15,7 +15,7 @@ import { TikTokPublishStatus } from '@/types';
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
 const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI;
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

@@ -75,8 +75,14 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const variant = String(searchParams.get('variant') || 'intro');
-    const song = typeof searchParams.get('song') === 'string' ? searchParams.get('song') : '';
-    let lyrics = typeof searchParams.get('lyrics') === 'string' ? searchParams.get('lyrics') : '';
+    const song =
+      typeof searchParams.get('song') === 'string'
+        ? searchParams.get('song')
+        : '';
+    let lyrics =
+      typeof searchParams.get('lyrics') === 'string'
+        ? searchParams.get('lyrics')
+        : '';
 
     const width = 1080;
     const height = 1920;
