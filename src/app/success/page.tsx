@@ -36,9 +36,15 @@ function SuccessContent() {
 
     if (isGenerated) {
       // Use actual generated data from callback
-      const title = decodeURIComponent(searchParams.get('title') || 'Generated Post');
-      const song = decodeURIComponent(searchParams.get('song') || 'Unknown Song');
-      const hashtags = decodeURIComponent(searchParams.get('hashtags') || '#music #trending');
+      const title = decodeURIComponent(
+        searchParams.get('title') || 'Generated Post'
+      );
+      const song = decodeURIComponent(
+        searchParams.get('song') || 'Unknown Song'
+      );
+      const hashtags = decodeURIComponent(
+        searchParams.get('hashtags') || '#music #trending'
+      );
       const introUrl =
         searchParams.get('intro_url') || '/api/slide?variant=intro';
       const songUrl = searchParams.get('song_url') || '/api/slide?variant=song';
@@ -50,9 +56,12 @@ function SuccessContent() {
         if (publishStatus === 'PUBLISHED') {
           message = '🎉 Posted to TikTok successfully! Your carousel is live!';
         } else if (publishStatus === 'FAILED' || publishError) {
-          message = `⚠️ Images generated but TikTok posting failed: ${publishError ? decodeURIComponent(publishError) : 'Unknown error'}`;
+          message = `⚠️ Images generated but TikTok posting failed: ${
+            publishError ? decodeURIComponent(publishError) : 'Unknown error'
+          }`;
         } else {
-          message = '📤 Images generated and posted to TikTok! Check your TikTok account.';
+          message =
+            '📤 Images generated and posted to TikTok! Check your TikTok account.';
         }
       }
 

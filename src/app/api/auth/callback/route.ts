@@ -108,13 +108,19 @@ export async function GET(request: NextRequest) {
     successUrl.searchParams.set('intro_url', imageData.imageUrls[0]);
     successUrl.searchParams.set('song_url', imageData.imageUrls[1]);
     successUrl.searchParams.set('lyrics_url', imageData.imageUrls[2]);
-    
+
     // Add publish status information
     const finalStatus = statusChecks[statusChecks.length - 1];
     if (finalStatus) {
-      successUrl.searchParams.set('publish_status', finalStatus.data?.status || 'UNKNOWN');
+      successUrl.searchParams.set(
+        'publish_status',
+        finalStatus.data?.status || 'UNKNOWN'
+      );
       if (finalStatus.error) {
-        successUrl.searchParams.set('publish_error', encodeURIComponent(finalStatus.error.message));
+        successUrl.searchParams.set(
+          'publish_error',
+          encodeURIComponent(finalStatus.error.message)
+        );
       }
     }
 
