@@ -50,48 +50,59 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenRes.data.access_token;
 
-    // Generate carousel post
     const publish = await postCarousel(accessToken);
 
     // Poll publish status
-    const statusChecks: TikTokPublishStatus[] = [];
-    try {
-      const publishId = publish.api?.data?.publish_id;
-      if (publishId) {
-        for (let i = 0; i < 4; i++) {
-          const status = await getPublishStatus(accessToken, publishId);
-          statusChecks.push(status);
+    // const statusChecks: TikTokPublishStatus[] = [];
+    // try {
+    //   const publishId = publish.api?.data?.publish_id;
+    //   if (publishId) {
+    //     for (let i = 0; i < 4; i++) {
+    //       const status = await getPublishStatus(accessToken, publishId);
+    //       statusChecks.push(status);
 
-          // Stop early if status indicates completion
-          const statusType = status?.data?.status;
-          if (
-            statusType &&
-            ['PUBLISHED', 'FAILED', 'CANCELLED'].includes(statusType)
-          ) {
-            break;
-          }
-          await sleep(2000);
-        }
-      }
-    } catch (e: any) {
-      statusChecks.push({
-        data: {
-          status: 'FAILED' as const,
-          publish_id: 'unknown',
-        },
-        error: {
-          code: 'STATUS_CHECK_ERROR',
-          message: e.response?.data?.message || e.message,
-        },
-      });
-    }
+    //       // Stop early if status indicates completion
+    //       const statusType = status?.data?.status;
+    //       if (
+    //         statusType &&
+    //         ['PUBLISHED', 'FAILED', 'CANCELLED'].includes(statusType)
+    //       ) {
+    //         break;
+    //       }
+    //       await sleep(2000);
+    //     }
+    //   }
+    // } catch (e: any) {
+    //   statusChecks.push({
+    //     data: {
+    //       status: 'FAILED' as const,
+    //       publish_id: 'unknown',
+    //     },
+    //     error: {
+    //       code: 'STATUS_CHECK_ERROR',
+    //       message: e.response?.data?.message || e.message,
+    //     },
+    //   });
+    // }
 
-    return NextResponse.json({
-      token: tokenRes.data,
-      publish_api: publish.api,
-      slide_urls: publish.imageUrls,
-      status_checks: statusChecks,
-    });
+    // return NextResponse.json({
+    //   token: tokenRes.data,
+    //   publish_api: publish.api,
+    //   slide_urls: publish.imageUrls,
+    //   status_checks: statusChecks,
+    // });
+
+    // Generate images for preview (skip TikTok posting for now)
+    console.log('Generating images for preview...');
+
+    // Generate images and redirect to success page
+    const imageData = await generatePreviewImages();
+
+    // Redirect to success page with image data
+    const successUrl = new URL('/success', BASE_URL);
+    successUrl.searchParams.set('generated', 'true');
+
+    return NextResponse.redirect(successUrl);
   } catch (err: any) {
     console.error(
       'Token error:',
@@ -129,6 +140,26 @@ async function postCarousel(accessToken: string) {
   );
 
   return { api: resp.data, imageUrls };
+}
+
+async function generatePreviewImages() {
+  const song = getRandomSong(songs);
+  const photoFiles = getRandomPhotoFiles();
+  const verifiedBaseUrl = 'https://ttphotos.online';
+  const imageUrls = generateImageUrls(verifiedBaseUrl, photoFiles, song);
+  const { title, hashtags } = generatePostContent();
+
+  return {
+    title,
+    song: song.name,
+    hashtags,
+    imageUrls,
+    variants: [
+      { variant: 'intro', url: imageUrls[0], description: 'Intro slide' },
+      { variant: 'song', url: imageUrls[1], description: 'Song title slide' },
+      { variant: 'lyrics', url: imageUrls[2], description: 'Lyrics slide' },
+    ],
+  };
 }
 
 async function getPublishStatus(

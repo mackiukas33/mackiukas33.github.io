@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import fs from 'fs';
 import path from 'path';
+import { songs } from '@/lib/data/songs';
 
 // Register fonts
 try {
@@ -16,13 +17,6 @@ try {
   );
 } catch (e: any) {
   console.warn('Font registration failed:', e.message);
-}
-
-interface ImageParams {
-  variant: 'intro' | 'song' | 'lyrics';
-  bg?: string;
-  song?: string;
-  lyrics?: string;
 }
 
 function drawRoundedRect(
@@ -78,124 +72,194 @@ function computeWrappedLines(
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const variant = searchParams.get('variant') as ImageParams['variant'];
-  const bg = searchParams.get('bg');
-  const song = searchParams.get('song');
-  const lyrics = searchParams.get('lyrics');
-
-  if (!variant || !bg) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
-  }
-
   try {
+    const { searchParams } = new URL(request.url);
+    const variant = String(searchParams.get('variant') || 'intro');
+    const song = typeof searchParams.get('song') === 'string' ? searchParams.get('song') : '';
+    let lyrics = typeof searchParams.get('lyrics') === 'string' ? searchParams.get('lyrics') : '';
+
     const width = 1080;
     const height = 1920;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Load background image
-    const bgPath = path.join(process.cwd(), 'public/photos', bg);
-    if (!fs.existsSync(bgPath)) {
-      return NextResponse.json(
-        { error: 'Background image not found' },
-        { status: 404 }
-      );
+    // Background: always pick a random photo; fallback to gradient if none
+    try {
+      const photosDir = path.join(process.cwd(), 'public/photos');
+      const files = fs
+        .readdirSync(photosDir)
+        .filter(
+          (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
+        );
+      if (files.length > 0) {
+        const randomBg = files[Math.floor(Math.random() * files.length)];
+        const img = await loadImage(path.join(photosDir, randomBg));
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / height;
+        let drawW, drawH, dx, dy;
+        if (imgRatio > canvasRatio) {
+          drawH = height;
+          drawW = height * imgRatio;
+          dx = (width - drawW) / 2;
+          dy = 0;
+        } else {
+          drawW = width;
+          drawH = width / imgRatio;
+          dx = 0;
+          dy = (height - drawH) / 2;
+        }
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, '#0f0c29');
+        grad.addColorStop(0.5, '#302b63');
+        grad.addColorStop(1, '#24243e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+      }
+    } catch {
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#0f0c29');
+      grad.addColorStop(0.5, '#302b63');
+      grad.addColorStop(1, '#24243e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
     }
 
-    const background = await loadImage(bgPath);
-    ctx.drawImage(background, 0, 0, width, height);
-
-    // Add dark overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    // Subtle vignette
+    const vignette = ctx.createRadialGradient(
+      width / 2,
+      height / 2,
+      Math.min(width, height) * 0.2,
+      width / 2,
+      height / 2,
+      Math.max(width, height) * 0.7
+    );
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
-    // Add content based on variant
+    // Text style
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 12;
+
+    let title = '';
+    let body = '';
+
     if (variant === 'intro') {
-      // Intro slide
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 72px InterBold';
-      ctx.textAlign = 'center';
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#000000';
-
-      const introText = "It's just a song..";
-      ctx.strokeText(introText, width / 2, height / 2);
-      ctx.fillText(introText, width / 2, height / 2);
-    } else if (variant === 'song' && song) {
-      // Song title slide
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 48px InterBold';
-      ctx.textAlign = 'center';
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#000000';
-
-      const songText = `the song: ${song}`;
-      ctx.strokeText(songText, width / 2, height / 2);
-      ctx.fillText(songText, width / 2, height / 2);
-    } else if (variant === 'lyrics' && lyrics) {
-      // Lyrics slide
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '36px Inter';
-      ctx.textAlign = 'center';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#000000';
-
-      const maxWidth = width - 100;
-      const lines = computeWrappedLines(ctx, lyrics, maxWidth);
-      const lineHeight = 50;
-      const startY = (height - lines.length * lineHeight) / 2;
-
-      lines.forEach((line, index) => {
-        const y = startY + index * lineHeight;
-        ctx.strokeText(line, width / 2, y);
-        ctx.fillText(line, width / 2, y);
-      });
+      title = '"It\'s just a song.."';
+    } else if (variant === 'song') {
+      title = 'The song:';
+    } else if (variant === 'lyrics') {
+      title = '';
+      if (!lyrics) {
+        // pick random lyrics from songs array if none provided
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        lyrics = randomSong.lyrics;
+      }
+      body = lyrics;
+    } else {
+      title = 'TTPhotos';
     }
 
-    // Add gem icon if available
-    try {
-      const gemPath = path.join(process.cwd(), 'public/gem.png');
-      if (fs.existsSync(gemPath)) {
-        const gem = await loadImage(gemPath);
+    const margin = 80;
+    const maxTextWidth = width - margin * 2;
+
+    // If lyrics slide, draw Twemoji gem image above the title
+    if (variant === 'lyrics') {
+      try {
+        const gem = await loadImage(
+          'https://twemoji.maxcdn.com/v/latest/72x72/1f48e.png'
+        );
         const gemSize = 120;
         const gx = (width - gemSize) / 2;
         const gy = 180;
         ctx.drawImage(gem, gx, gy, gemSize, gemSize);
-      }
-    } catch {}
+      } catch {}
+    }
 
-    // Add footer text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px InterBold';
+    // Draw title (centered). Reduced ~30%
+    ctx.font = GlobalFonts.has('InterBold')
+      ? '68px InterBold'
+      : 'bold 68px sans-serif';
+    const titleMetrics = ctx.measureText(title);
+    const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
+    const titleX = (width - titleRenderWidth) / 2;
+    let titleY = 220;
+    if (variant === 'intro' || variant === 'song') {
+      titleY = Math.floor((height - 68) / 2);
+    } else if (variant === 'lyrics') {
+      titleY = 300;
+    }
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeText(title, titleX, titleY);
+    ctx.fillText(title, titleX, titleY);
+
+    // Draw body/wrapped lyrics
+    if (body) {
+      if (variant === 'lyrics') {
+        // Lyrics panel: center text within a fitted shadow box
+        const panelX = margin;
+        const panelW = width - margin * 2;
+        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
+        const lineHeight = 46;
+        const innerPad = 40;
+        const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
+        const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
+        const panelH = totalHeight + innerPad * 2;
+        const panelY = Math.max(0, Math.floor((height - panelH) / 2));
+
+        // Draw shadow box
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000000';
+        drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Draw centered lyrics
+        ctx.fillStyle = '#FFFFFF';
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#000000';
+        ctx.textAlign = 'center';
+        const startY = panelY + Math.floor((panelH - totalHeight) / 2);
+        const centerX = panelX + Math.floor(panelW / 2);
+        for (let i = 0; i < lines.length; i++) {
+          const y = startY + i * lineHeight;
+          ctx.strokeText(lines[i], centerX, y);
+          ctx.fillText(lines[i], centerX, y);
+        }
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // Footer CTA (reduced ~30%)
+    ctx.font = GlobalFonts.has('Inter') ? '31px Inter' : '31px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
     ctx.strokeStyle = '#000000';
-
-    const footerText = 'Follow for more underrated gems';
-    ctx.strokeText(footerText, width / 2, height - 180);
-    ctx.fillText(footerText, width / 2, height - 180);
+    ctx.strokeText('Follow for more underrated gems', width / 2, height - 180);
+    ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
-    // Convert to buffer
+    // Prevent CDN/browser caching so previews can change each load
     const buffer = canvas.toBuffer('image/jpeg', 0.9);
 
     return new NextResponse(buffer as any, {
       headers: {
         'Content-Type': 'image/jpeg',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
         Pragma: 'no-cache',
         Expires: '0',
       },
     });
-  } catch (error: any) {
-    console.error('Image generation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate image' },
-      { status: 500 }
-    );
+  } catch (e: any) {
+    console.error('slide render error', e);
+    return NextResponse.json({ error: 'render_error' }, { status: 500 });
   }
 }
