@@ -30,17 +30,31 @@ function SuccessContent() {
   useEffect(() => {
     // Get data from URL params (from OAuth callback) or use demo data
     const isGenerated = searchParams.get('generated') === 'true';
+    const isPosted = searchParams.get('posted') === 'true';
+    const publishStatus = searchParams.get('publish_status');
+    const publishError = searchParams.get('publish_error');
 
     if (isGenerated) {
       // Use actual generated data from callback
-      const title = searchParams.get('title') || 'Generated Post';
-      const song = searchParams.get('song') || 'Unknown Song';
-      const hashtags = searchParams.get('hashtags') || '#music #trending';
+      const title = decodeURIComponent(searchParams.get('title') || 'Generated Post');
+      const song = decodeURIComponent(searchParams.get('song') || 'Unknown Song');
+      const hashtags = decodeURIComponent(searchParams.get('hashtags') || '#music #trending');
       const introUrl =
         searchParams.get('intro_url') || '/api/slide?variant=intro';
       const songUrl = searchParams.get('song_url') || '/api/slide?variant=song';
       const lyricsUrl =
         searchParams.get('lyrics_url') || '/api/slide?variant=lyrics';
+
+      let message = 'Beautiful images generated successfully!';
+      if (isPosted) {
+        if (publishStatus === 'PUBLISHED') {
+          message = '🎉 Posted to TikTok successfully! Your carousel is live!';
+        } else if (publishStatus === 'FAILED' || publishError) {
+          message = `⚠️ Images generated but TikTok posting failed: ${publishError ? decodeURIComponent(publishError) : 'Unknown error'}`;
+        } else {
+          message = '📤 Images generated and posted to TikTok! Check your TikTok account.';
+        }
+      }
 
       setResult({
         token: {},
@@ -67,7 +81,7 @@ function SuccessContent() {
             },
           ],
         },
-        message: 'Beautiful images generated successfully!',
+        message,
       });
     } else {
       // Use demo data for direct access
