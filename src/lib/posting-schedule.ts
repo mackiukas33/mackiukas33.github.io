@@ -69,16 +69,28 @@ export async function stopPostingSchedule(userId: string) {
 }
 
 export async function getPostingSchedule(userId: string) {
-  return await prisma.postingSchedule.findUnique({
+  const schedule = await prisma.postingSchedule.findUnique({
     where: { userId },
     include: {
       user: true,
-      scheduledPosts: {
-        where: { status: 'PENDING' },
-        orderBy: { scheduledFor: 'asc' },
-      },
     },
   });
+
+  if (!schedule) return null;
+
+  // Get pending posts separately
+  const scheduledPosts = await prisma.scheduledPost.findMany({
+    where: {
+      userId,
+      status: 'PENDING',
+    },
+    orderBy: { scheduledFor: 'asc' },
+  });
+
+  return {
+    ...schedule,
+    scheduledPosts,
+  };
 }
 
 async function generateScheduledPosts(userId: string) {
@@ -114,13 +126,14 @@ async function generateScheduledPosts(userId: string) {
         photoFiles,
         randomSong
       );
-      const { title, hashtags } = getRandomTitle();
+      const title = getRandomTitle();
+      const hashtags = getRandomHashtags().join(' ');
 
       posts.push({
         userId,
         title,
         song: randomSong.name,
-        hashtags: hashtags.join(' '),
+        hashtags,
         imageUrls,
         scheduledFor,
         status: 'PENDING' as const,
