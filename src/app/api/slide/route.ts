@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
       const maxTextWidth = panelW - innerPad * 2;
 
       // Start with a large font
-      let fontSize = 140 * 0.5;
+      let fontSize = 140;
       ctx.font = `${fontSize}px Inter, sans-serif`;
       let lines = computeWrappedLines(ctx, body, maxTextWidth);
 
@@ -229,6 +229,10 @@ export async function GET(request: NextRequest) {
         lines = computeWrappedLines(ctx, body, maxTextWidth);
         totalHeight = lines.length * fontSize * lineSpacing;
       }
+
+      fontSize = Math.floor(fontSize * 0.5);
+      ctx.font = `${fontSize}px Inter, sans-serif`;
+      totalHeight = lines.length * fontSize * lineSpacing;
 
       // Draw shadow box behind lyrics
       const panelH = totalHeight + innerPad * 2;
