@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       refreshToken,
       expiresAt: Date.now() + expiresIn * 1000,
       scope: tokenRes.data.scope,
+      userId: `user_${Date.now()}`, // Generate a unique user ID
     };
 
     let publish: any;

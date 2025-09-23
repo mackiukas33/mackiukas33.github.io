@@ -28,6 +28,8 @@ function SuccessContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { authenticated, logout } = useSession();
+  const [postingSchedule, setPostingSchedule] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     // Get data from URL params (from OAuth callback) or use demo data
@@ -132,6 +134,68 @@ function SuccessContent() {
     setLoading(false);
   }, [searchParams]);
 
+  // Load posting schedule
+  useEffect(() => {
+    if (authenticated) {
+      loadPostingSchedule();
+    }
+  }, [authenticated]);
+
+  const loadPostingSchedule = async () => {
+    try {
+      const response = await fetch('/api/posts/schedule');
+      const data = await response.json();
+      setPostingSchedule(data.schedule);
+    } catch (error) {
+      console.error('Failed to load posting schedule:', error);
+    }
+  };
+
+  const handleStartUploading = async () => {
+    setIsUploading(true);
+    try {
+      const response = await fetch('/api/posts/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setPostingSchedule(data.schedule);
+        alert('Uploading started! Posts will be scheduled at optimal times.');
+      } else {
+        alert(`Failed to start uploading: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to start uploading:', error);
+      alert('Failed to start uploading. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleStopUploading = async () => {
+    try {
+      const response = await fetch('/api/posts/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      });
+
+      if (response.ok) {
+        setPostingSchedule(null);
+        alert('Uploading stopped successfully.');
+      } else {
+        const data = await response.json();
+        alert(`Failed to stop uploading: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to stop uploading:', error);
+      alert('Failed to stop uploading. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -195,16 +259,46 @@ function SuccessContent() {
             {result?.message || 'Welcome to your TTPhotos dashboard'}
           </p>
 
-          {/* Start Uploading Button */}
-          <button
-            onClick={() => {
-              // TODO: Implement upload functionality
-              console.log('Start uploading clicked');
-            }}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg"
-          >
-            Start Uploading
-          </button>
+          {/* Upload Control Buttons */}
+          {postingSchedule?.isActive ? (
+            <div className="space-y-4">
+              <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 font-semibold">
+                    Uploading Active
+                  </span>
+                </div>
+                <p className="text-white/80 text-sm text-center">
+                  Posts scheduled at: {postingSchedule.postingTimes.join(', ')}
+                </p>
+                <p className="text-white/60 text-xs text-center mt-1">
+                  {postingSchedule.scheduledPosts?.length || 0} posts queued
+                </p>
+              </div>
+              <button
+                onClick={handleStopUploading}
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+              >
+                Stop Uploading
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleStartUploading}
+              disabled={isUploading}
+              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:from-gray-500 disabled:to-gray-600 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed shadow-lg"
+            >
+              {isUploading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Starting...</span>
+                </div>
+              ) : (
+                'Start Uploading'
+              )}
+            </button>
+          )}
         </div>
 
         {/* Recent Activity */}

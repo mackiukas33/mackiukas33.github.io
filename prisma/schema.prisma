@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // TikTok session data
+  tiktokAccessToken  String?
+  tiktokRefreshToken String?
+  tiktokTokenExpires DateTime?
+  tiktokScope        String?
+
+  // Posting schedule
+  postingSchedule PostingSchedule?
+  scheduledPosts  ScheduledPost[]
+
+  @@map("users")
+}
+
+model PostingSchedule {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @unique @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optimal posting times (5 times per day)
+  postingTimes String[] // Array of time strings like ["09:00", "12:00", "15:00", "18:00", "21:00"]
+
+  // Settings
+  postsPerDay Int    @default(5)
+  timezone    String @default("UTC")
+
+  @@map("posting_schedules")
+}
+
+model ScheduledPost {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Post content
+  title     String
+  song      String
+  hashtags  String
+  imageUrls String[] // Array of image URLs
+
+  // Scheduling
+  scheduledFor DateTime
+  status       PostStatus @default(PENDING)
+
+  // TikTok response
+  tiktokPublishId String?
+  tiktokStatus    String?
+  tiktokError     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("scheduled_posts")
+}
+
+enum PostStatus {
+  PENDING
+  POSTING
+  POSTED
+  FAILED
+  CANCELLED
+}
