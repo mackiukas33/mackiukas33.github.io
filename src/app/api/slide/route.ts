@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import fs from 'fs';
 import path from 'path';
 import { songs } from '@/lib/data/songs';
@@ -7,14 +7,8 @@ import { songs } from '@/lib/data/songs';
 // Register fonts
 try {
   const fontsDir = path.join(process.cwd(), 'public', 'fonts');
-  GlobalFonts.registerFromPath(
-    path.join(fontsDir, 'Inter-Regular.ttf'),
-    'Inter'
-  );
-  GlobalFonts.registerFromPath(
-    path.join(fontsDir, 'Inter-Bold.ttf'),
-    'InterBold'
-  );
+  registerFont(path.join(fontsDir, 'Inter-Regular.ttf'), { family: 'Inter' });
+  registerFont(path.join(fontsDir, 'Inter-Bold.ttf'), { family: 'InterBold' });
 } catch (e: any) {
   console.warn('Font registration failed:', e.message);
 }
@@ -97,32 +91,23 @@ export async function GET(request: NextRequest) {
         .filter(
           (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
         );
-      if (files.length > 0) {
-        const randomBg = files[Math.floor(Math.random() * files.length)];
-        const img = await loadImage(path.join(photosDir, randomBg));
-        const imgRatio = img.width / img.height;
-        const canvasRatio = width / height;
-        let drawW, drawH, dx, dy;
-        if (imgRatio > canvasRatio) {
-          drawH = height;
-          drawW = height * imgRatio;
-          dx = (width - drawW) / 2;
-          dy = 0;
-        } else {
-          drawW = width;
-          drawH = width / imgRatio;
-          dx = 0;
-          dy = (height - drawH) / 2;
-        }
-        ctx.drawImage(img, dx, dy, drawW, drawH);
+      const randomBg = files[Math.floor(Math.random() * files.length)];
+      const img = await loadImage(path.join(photosDir, randomBg));
+      const imgRatio = img.width / img.height;
+      const canvasRatio = width / height;
+      let drawW, drawH, dx, dy;
+      if (imgRatio > canvasRatio) {
+        drawH = height;
+        drawW = height * imgRatio;
+        dx = (width - drawW) / 2;
+        dy = 0;
       } else {
-        const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#0f0c29');
-        grad.addColorStop(0.5, '#302b63');
-        grad.addColorStop(1, '#24243e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+        drawW = width;
+        drawH = width / imgRatio;
+        dx = 0;
+        dy = (height - drawH) / 2;
       }
+      ctx.drawImage(img, dx, dy, drawW, drawH);
     } catch {
       const grad = ctx.createLinearGradient(0, 0, 0, height);
       grad.addColorStop(0, '#0f0c29');
@@ -188,9 +173,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Draw title (centered). Reduced ~30%
-    ctx.font = GlobalFonts.has('InterBold')
-      ? '68px InterBold'
-      : 'bold 68px sans-serif';
+    ctx.font = '68px InterBold, bold 68px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
@@ -208,43 +191,41 @@ export async function GET(request: NextRequest) {
 
     // Draw body/wrapped lyrics
     if (body) {
-      if (variant === 'lyrics') {
-        // Lyrics panel: center text within a fitted shadow box
-        const panelX = margin;
-        const panelW = width - margin * 2;
-        ctx.font = GlobalFonts.has('Inter') ? '36px Inter' : '36px sans-serif';
-        const lineHeight = 46;
-        const innerPad = 40;
-        const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
-        const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
-        const panelH = totalHeight + innerPad * 2;
-        const panelY = Math.max(0, Math.floor((height - panelH) / 2));
+      // Lyrics panel: center text within a fitted shadow box
+      const panelX = margin;
+      const panelW = width - margin * 2;
+        ctx.font = '36px Inter, 36px sans-serif';
+      const lineHeight = 46;
+      const innerPad = 40;
+      const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
+      const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
+      const panelH = totalHeight + innerPad * 2;
+      const panelY = Math.max(0, Math.floor((height - panelH) / 2));
 
-        // Draw shadow box
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#000000';
-        drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+      // Draw shadow box
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#000000';
+      drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
-        // Draw centered lyrics
-        ctx.fillStyle = '#FFFFFF';
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = '#000000';
-        ctx.textAlign = 'center';
-        const startY = panelY + Math.floor((panelH - totalHeight) / 2);
-        const centerX = panelX + Math.floor(panelW / 2);
-        for (let i = 0; i < lines.length; i++) {
-          const y = startY + i * lineHeight;
-          ctx.strokeText(lines[i], centerX, y);
-          ctx.fillText(lines[i], centerX, y);
-        }
-        ctx.textAlign = 'left';
+      // Draw centered lyrics
+      ctx.fillStyle = '#FFFFFF';
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#000000';
+      ctx.textAlign = 'center';
+      const startY = panelY + Math.floor((panelH - totalHeight) / 2);
+      const centerX = panelX + Math.floor(panelW / 2);
+      for (let i = 0; i < lines.length; i++) {
+        const y = startY + i * lineHeight;
+        ctx.strokeText(lines[i], centerX, y);
+        ctx.fillText(lines[i], centerX, y);
       }
+      ctx.textAlign = 'left';
     }
 
     // Footer CTA (reduced ~30%)
-    ctx.font = GlobalFonts.has('Inter') ? '31px Inter' : '31px sans-serif';
+    ctx.font = '31px Inter, 31px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
