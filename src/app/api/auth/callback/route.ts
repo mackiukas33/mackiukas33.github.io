@@ -50,13 +50,18 @@ export async function GET(request: NextRequest) {
     const refreshToken = tokenRes.data.refresh_token;
     const expiresIn = tokenRes.data.expires_in || 86400; // Default to 24 hours
 
+    // Generate a proper MongoDB ObjectID (24-character hex string)
+    const userId = Array.from({ length: 24 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('');
+
     // Store session data
     const sessionData: SessionData = {
       accessToken,
       refreshToken,
       expiresAt: Date.now() + expiresIn * 1000,
       scope: tokenRes.data.scope,
-      userId: `user_${Date.now()}`, // Generate a unique user ID
+      userId,
     };
 
     let publish: any;
