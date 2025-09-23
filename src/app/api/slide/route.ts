@@ -84,19 +84,24 @@ export async function GET(request: NextRequest) {
         ? searchParams.get('lyrics')
         : '';
 
-    // HIGH QUALITY CANVAS SETUP
+    // HIGH QUALITY CANVAS WITH PROPER SCALING
     const width = 1080;
     const height = 1920;
 
-    // Create high-DPI canvas for crisp rendering
-    const scale = 2; // 2x scale for retina quality
+    // Create high-resolution canvas for quality, then scale down
+    const scale = 2;
     const canvas = createCanvas(width * scale, height * scale);
     const ctx = canvas.getContext('2d');
 
-    // Enable high-quality rendering
+    // Enable maximum quality rendering
     ctx.scale(scale, scale);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    
+    // Enhanced text rendering for crisp text
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 15;
 
     // HIGH QUALITY BACKGROUND RENDERING
     try {
@@ -180,11 +185,11 @@ export async function GET(request: NextRequest) {
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
-    // Text style
+    // Enhanced text style for better quality
     ctx.fillStyle = '#FFFFFF';
     ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 15;
 
     let title = '';
     let body = '';
@@ -237,12 +242,12 @@ export async function GET(request: NextRequest) {
       titleY = 300;
     }
 
-    // High quality text with better stroke
-    ctx.lineWidth = 12;
+    // Enhanced text rendering with stronger stroke
+    ctx.lineWidth = 10;
     ctx.strokeStyle = '#000000';
     ctx.fillStyle = '#FFFFFF';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 16;
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 18;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
@@ -274,13 +279,13 @@ export async function GET(request: NextRequest) {
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // HIGH QUALITY LYRICS RENDERING
+        // ENHANCED LYRICS RENDERING
         ctx.fillStyle = '#FFFFFF';
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 6;
         ctx.strokeStyle = '#000000';
         ctx.textAlign = 'center';
         ctx.shadowColor = 'rgba(0,0,0,0.9)';
-        ctx.shadowBlur = 14;
+        ctx.shadowBlur = 16;
 
         const startY = panelY + Math.floor((panelH - totalHeight) / 2);
         const centerX = panelX + Math.floor(panelW / 2);
@@ -297,18 +302,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Footer CTA (reduced ~30%)
+    // Enhanced Footer CTA
     ctx.font = GlobalFonts.has('Inter') ? '31px Inter' : '31px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 5;
     ctx.strokeStyle = '#000000';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 12;
     ctx.strokeText('Follow for more underrated gems', width / 2, height - 180);
     ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
+    // CREATE FINAL OUTPUT AT CORRECT TIKTOK DIMENSIONS
+    const outputCanvas = createCanvas(width, height);
+    const outputCtx = outputCanvas.getContext('2d');
+    
+    // Enable high quality scaling
+    outputCtx.imageSmoothingEnabled = true;
+    outputCtx.imageSmoothingQuality = 'high';
+    
+    // Draw the high-resolution canvas onto the output canvas at correct size
+    outputCtx.drawImage(canvas, 0, 0, width, height);
+    
     // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility
-    const buffer = canvas.toBuffer('image/jpeg', 0.95);
+    const buffer = outputCanvas.toBuffer('image/jpeg', 0.95);
 
     return new NextResponse(buffer as any, {
       headers: {
