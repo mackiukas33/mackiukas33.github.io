@@ -3,7 +3,7 @@ import { songs } from './data/songs';
 import { getRandomHashtags, getRandomTitle } from './data/hashtags';
 import { getRandomPhotoFiles, generateImageUrls } from './utils';
 
-// Optimal TikTok posting times (5 times per day)
+// Optimal TikTok posting hours (5 times per day)
 const OPTIMAL_POSTING_TIMES = [
   '00:00', // 12 AM (midnight) - FOR TESTING
   '09:00', // 9 AM

@@ -28,8 +28,12 @@ export async function GET(request: NextRequest) {
     const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
 
     for (const schedule of activeSchedules) {
-      // Check if current time matches any of the posting times
-      const shouldPost = schedule.postingTimes.includes(currentTime);
+      // Check if current hour matches any of the posting hours
+      const currentHour = now.getHours();
+      const shouldPost = schedule.postingTimes.some((postingTime) => {
+        const [postHours] = postingTime.split(':').map(Number);
+        return postHours === currentHour;
+      });
 
       if (!shouldPost) {
         continue;
