@@ -12,6 +12,33 @@ const OPTIMAL_POSTING_TIMES = [
   '18:00', // 6 PM
 ];
 
+// Generate next posting times for the next 7 days
+function generateNextPostingTimes(): Date[] {
+  const now = new Date();
+  const postingTimes: Date[] = [];
+
+  // Generate for next 7 days
+  for (let day = 0; day < 7; day++) {
+    const currentDate = new Date(now);
+    currentDate.setDate(now.getDate() + day);
+
+    for (const time of OPTIMAL_POSTING_TIMES) {
+      const [hours, minutes] = time.split(':').map(Number);
+      const scheduledFor = new Date(currentDate);
+      scheduledFor.setHours(hours, minutes, 0, 0);
+
+      // Skip if this time has already passed today
+      if (day === 0 && scheduledFor <= now) {
+        continue;
+      }
+
+      postingTimes.push(scheduledFor);
+    }
+  }
+
+  return postingTimes.sort((a, b) => a.getTime() - b.getTime());
+}
+
 export interface PostingScheduleData {
   userId: string;
   tiktokAccessToken: string;
@@ -55,7 +82,7 @@ export async function createPostingSchedule(data: PostingScheduleData) {
     },
   });
 
-  // No need to pre-generate posts - they'll be created on-demand at posting times
+  // No need to pre-generate posts - they'll be created on-demand when due
   return schedule;
 }
 
@@ -117,45 +144,31 @@ async function generateScheduledPosts(userId: string) {
 
   if (!schedule || !schedule.isActive) return;
 
-  // Generate posts for the next 7 days
+  // Generate posting times for the next 7 days
+  const postingTimes = generateNextPostingTimes();
   const posts = [];
-  const today = new Date();
 
-  for (let day = 0; day < 7; day++) {
-    const currentDate = new Date(today);
-    currentDate.setDate(today.getDate() + day);
+  for (const scheduledFor of postingTimes) {
+    // Generate random content
+    const randomSong = songs[Math.floor(Math.random() * songs.length)];
+    const photoFiles = getRandomPhotoFiles();
+    const imageUrls = generateImageUrls(
+      process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online',
+      photoFiles,
+      randomSong
+    );
+    const title = getRandomTitle();
+    const hashtags = getRandomHashtags().join(' ');
 
-    for (const time of schedule.postingTimes) {
-      const [hours, minutes] = time.split(':').map(Number);
-      const scheduledFor = new Date(currentDate);
-      scheduledFor.setHours(hours, minutes, 0, 0);
-
-      // Skip if this time has already passed today
-      if (day === 0 && scheduledFor <= new Date()) {
-        continue;
-      }
-
-      // Generate random content
-      const randomSong = songs[Math.floor(Math.random() * songs.length)];
-      const photoFiles = getRandomPhotoFiles();
-      const imageUrls = generateImageUrls(
-        process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online',
-        photoFiles,
-        randomSong
-      );
-      const title = getRandomTitle();
-      const hashtags = getRandomHashtags().join(' ');
-
-      posts.push({
-        userId,
-        title,
-        song: randomSong.name,
-        hashtags,
-        imageUrls,
-        scheduledFor,
-        status: 'PENDING' as const,
-      });
-    }
+    posts.push({
+      userId,
+      title,
+      song: randomSong.name,
+      hashtags,
+      imageUrls,
+      scheduledFor,
+      status: 'PENDING' as const,
+    });
   }
 
   // Create all scheduled posts

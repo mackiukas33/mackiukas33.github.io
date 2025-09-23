@@ -4,11 +4,5 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/upload-posts",
-      "schedule": "0 */1 * * *"
-    }
-  ]
+  }
 }
