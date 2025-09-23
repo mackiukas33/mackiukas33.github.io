@@ -5,11 +5,11 @@ const nextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push('@napi-rs/canvas');
+      config.externals.push('canvas');
     }
     return config;
   },
-  serverExternalPackages: ['@napi-rs/canvas'],
+  serverExternalPackages: ['canvas'],
 };
 
 module.exports = nextConfig;
