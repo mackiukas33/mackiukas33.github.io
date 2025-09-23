@@ -255,6 +255,22 @@ export async function GET(request: NextRequest) {
     // Debug: Check canvas content before output
     console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
     console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
+    
+    // Debug: Check if canvas has any content by sampling pixels
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    console.log(`Image data length: ${imageData.data.length}`);
+    
+    // Check if canvas is mostly black/empty
+    let nonBlackPixels = 0;
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      if (r > 10 || g > 10 || b > 10) {
+        nonBlackPixels++;
+      }
+    }
+    console.log(`Non-black pixels: ${nonBlackPixels} out of ${imageData.data.length / 4}`);
 
     // Try maximum quality to see if that fixes the tiny file size
     const buffer = canvas.toBuffer('image/jpeg', 1.0);
