@@ -215,7 +215,8 @@ export async function GET(request: NextRequest) {
 
       // Start with a large font
       let fontSize = 140;
-      ctx.font = `${fontSize}px Inter, sans-serif`;
+      const baseFont = 'Inter, sans-serif';
+      ctx.font = `${fontSize}px ${baseFont}`;
       let lines = computeWrappedLines(ctx, body, maxTextWidth);
 
       // Scale font to fit max panel height (60% of canvas)
@@ -225,13 +226,33 @@ export async function GET(request: NextRequest) {
 
       while (totalHeight > maxPanelHeight && fontSize > 40) {
         fontSize -= 4;
-        ctx.font = `${fontSize}px Inter, sans-serif`;
+        ctx.font = `${fontSize}px ${baseFont}`;
         lines = computeWrappedLines(ctx, body, maxTextWidth);
         totalHeight = lines.length * fontSize * lineSpacing;
       }
 
+      // 🔹 Scale horizontally to fit the widest line
+      let widestWidth = 0;
+      for (const line of lines) {
+        const w = ctx.measureText(line).width;
+        if (w > widestWidth) widestWidth = w;
+      }
+
+      while (widestWidth > maxTextWidth && fontSize > 20) {
+        fontSize -= 2;
+        ctx.font = `${fontSize}px ${baseFont}`;
+        lines = computeWrappedLines(ctx, body, maxTextWidth);
+
+        widestWidth = 0;
+        for (const line of lines) {
+          const w = ctx.measureText(line).width;
+          if (w > widestWidth) widestWidth = w;
+        }
+      }
+
+      // 🔹 Apply final 0.5 reduction
       fontSize = Math.floor(fontSize * 0.5);
-      ctx.font = `${fontSize}px Inter, sans-serif`;
+      ctx.font = `${fontSize}px ${baseFont}`;
       totalHeight = lines.length * fontSize * lineSpacing;
 
       // Draw shadow box behind lyrics
