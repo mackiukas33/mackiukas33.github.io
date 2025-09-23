@@ -6,11 +6,13 @@
 
 1. **Push your code to GitHub**
 2. **Connect to Vercel:**
+
    - Go to [vercel.com](https://vercel.com)
    - Import your GitHub repository
    - Vercel will auto-detect it's a Next.js app
 
 3. **Add Environment Variables in Vercel Dashboard:**
+
    - Go to your project → Settings → Environment Variables
    - Add these variables:
 
@@ -50,15 +52,16 @@
 
 ## Environment Variable Reference:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `TIKTOK_CLIENT_KEY` | Your TikTok app client key | `aw1234567890abcdef` |
-| `TIKTOK_CLIENT_SECRET` | Your TikTok app client secret | `secret1234567890abcdef` |
-| `TIKTOK_REDIRECT_URI` | OAuth callback URL | `https://yourapp.vercel.app/api/auth/callback` |
-| `NEXT_PUBLIC_BASE_URL` | Your app's base URL | `https://yourapp.vercel.app` |
+| Variable               | Description                   | Example                                        |
+| ---------------------- | ----------------------------- | ---------------------------------------------- |
+| `TIKTOK_CLIENT_KEY`    | Your TikTok app client key    | `aw1234567890abcdef`                           |
+| `TIKTOK_CLIENT_SECRET` | Your TikTok app client secret | `secret1234567890abcdef`                       |
+| `TIKTOK_REDIRECT_URI`  | OAuth callback URL            | `https://yourapp.vercel.app/api/auth/callback` |
+| `NEXT_PUBLIC_BASE_URL` | Your app's base URL           | `https://yourapp.vercel.app`                   |
 
 ## Local Development:
 
 1. Copy `env.example` to `.env.local`
 2. Fill in your TikTok API credentials
 3. Run `npm run dev`
+   sadasd
