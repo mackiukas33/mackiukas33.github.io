@@ -172,88 +172,112 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // Draw title (centered) - Balanced size for TikTok readability
-    ctx.font = '160px InterBold, bold 160px sans-serif';
-    const titleMetrics = ctx.measureText(title);
-    const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
-    const titleX = (width - titleRenderWidth) / 2;
+    // ---------------------------
+    // Title (centered, dynamic size)
+    // ---------------------------
+    let titleFontSize = 160;
+    ctx.font = `bold ${titleFontSize}px InterBold, sans-serif`;
+
+    // Scale title if too wide
+    const titleMaxWidth = width - margin * 2;
+    let titleMetrics = ctx.measureText(title);
+    while (titleMetrics.width > titleMaxWidth && titleFontSize > 60) {
+      titleFontSize -= 4;
+      ctx.font = `bold ${titleFontSize}px InterBold, sans-serif`;
+      titleMetrics = ctx.measureText(title);
+    }
+
+    // Determine Y position
     let titleY = 220;
     if (variant === 'intro' || variant === 'song') {
-      titleY = Math.floor((height - 160) / 2);
+      titleY = Math.floor((height - titleFontSize) / 2);
     } else if (variant === 'lyrics') {
-      titleY = 300;
+      titleY = 300; // leave space for gem if present
     }
-    ctx.lineWidth = 8;
+
+    // Draw title with stroke and fill
+    ctx.lineWidth = Math.floor(titleFontSize / 20); // proportional stroke
     ctx.strokeStyle = '#000000';
     ctx.fillStyle = '#FFFFFF';
-    ctx.strokeText(title, titleX, titleY);
-    ctx.fillText(title, titleX, titleY);
+    ctx.textAlign = 'center';
+    ctx.strokeText(title, width / 2, titleY);
+    ctx.fillText(title, width / 2, titleY);
+    ctx.textAlign = 'left';
 
-    // Draw body/wrapped lyrics
+    // ---------------------------
+    // Lyrics / Body (dynamic scaling)
+    // ---------------------------
     if (body) {
-      // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-      ctx.font = '100px Inter, 100px sans-serif';
-      const lineHeight = 130;
       const innerPad = 40;
-      const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
-      const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
+      const maxTextWidth = panelW - innerPad * 2;
+
+      // Start with a large font
+      let fontSize = 140;
+      ctx.font = `${fontSize}px Inter, sans-serif`;
+      let lines = computeWrappedLines(ctx, body, maxTextWidth);
+
+      // Scale font to fit max panel height (60% of canvas)
+      const maxPanelHeight = height * 0.6;
+      const lineSpacing = 1.2;
+      let totalHeight = lines.length * fontSize * lineSpacing;
+
+      while (totalHeight > maxPanelHeight && fontSize > 40) {
+        fontSize -= 4;
+        ctx.font = `${fontSize}px Inter, sans-serif`;
+        lines = computeWrappedLines(ctx, body, maxTextWidth);
+        totalHeight = lines.length * fontSize * lineSpacing;
+      }
+
+      // Draw shadow box behind lyrics
       const panelH = totalHeight + innerPad * 2;
       const panelY = Math.max(0, Math.floor((height - panelH) / 2));
 
-      // Draw shadow box
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#000000';
       drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 28);
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Draw centered lyrics
+      // Draw centered lyrics with stroke and fill
       ctx.fillStyle = '#FFFFFF';
-      ctx.lineWidth = 6;
       ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
-      const startY = panelY + Math.floor((panelH - totalHeight) / 2);
-      const centerX = panelX + Math.floor(panelW / 2);
+
+      const startY = panelY + innerPad + fontSize / 2;
       for (let i = 0; i < lines.length; i++) {
-        const y = startY + i * lineHeight;
-        ctx.strokeText(lines[i], centerX, y);
-        ctx.fillText(lines[i], centerX, y);
+        const y = startY + i * fontSize * lineSpacing;
+        ctx.strokeText(lines[i], width / 2, y);
+        ctx.fillText(lines[i], width / 2, y);
       }
+
       ctx.textAlign = 'left';
     }
 
-    // Footer CTA - Balanced size for TikTok readability
-    ctx.font = '90px Inter, 90px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.textAlign = 'center';
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#000000';
-    ctx.strokeText('Follow for more underrated gems', width / 2, height - 150);
-    ctx.fillText('Follow for more underrated gems', width / 2, height - 150);
-    ctx.textAlign = 'left';
-    // Debug: Check canvas content before output
-    console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
-    console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
+    // ---------------------------
+    // Footer CTA (dynamic scaling)
+    // ---------------------------
+    let footerFontSize = 90;
+    ctx.font = `${footerFontSize}px Inter, sans-serif`;
 
-    // Debug: Check if canvas has any content by sampling pixels
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    console.log(`Image data length: ${imageData.data.length}`);
-
-    // Check if canvas is mostly black/empty
-    let nonBlackPixels = 0;
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      const r = imageData.data[i];
-      const g = imageData.data[i + 1];
-      const b = imageData.data[i + 2];
-      if (r > 10 || g > 10 || b > 10) {
-        nonBlackPixels++;
-      }
+    // Scale footer if too wide
+    const footerText = 'Follow for more underrated gems';
+    let footerMetrics = ctx.measureText(footerText);
+    while (footerMetrics.width > width - margin * 2 && footerFontSize > 40) {
+      footerFontSize -= 2;
+      ctx.font = `${footerFontSize}px Inter, sans-serif`;
+      footerMetrics = ctx.measureText(footerText);
     }
-    console.log(
-      `Non-black pixels: ${nonBlackPixels} out of ${imageData.data.length / 4}`
-    );
+
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = Math.floor(footerFontSize / 16);
+    ctx.textAlign = 'center';
+    ctx.strokeText(footerText, width / 2, height - 150);
+    ctx.fillText(footerText, width / 2, height - 150);
+    ctx.textAlign = 'left';
 
     // Try maximum quality to see if that fixes the tiny file size
     const buffer = canvas.toBuffer('image/jpeg');
