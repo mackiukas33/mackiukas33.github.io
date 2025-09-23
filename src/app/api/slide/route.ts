@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     // Enable maximum quality rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    
+
     // Fill canvas with solid background to ensure no transparency
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
@@ -320,7 +320,7 @@ export async function GET(request: NextRequest) {
     console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
 
     // Fix JPEG compression issue - ensure no transparency and proper quality
-    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
+    const buffer = canvas.toBuffer('image/jpeg', 0.95);
 
     // Debug: Log file size for TikTok compatibility
     const fileSizeKB = Math.round(buffer.length / 1024);
