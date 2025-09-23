@@ -1,39 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPendingPosts, updatePostStatus } from '@/lib/posting-schedule';
+import {
+  getPendingPosts,
+  updatePostStatus,
+  getPostingSchedule,
+} from '@/lib/posting-schedule';
 import { createCarouselPayload } from '@/lib/utils';
 import axios from 'axios';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify this is a legitimate cron request (you can add authentication here)
+    // Verify this is a legitimate cron request
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get pending posts that are due
-    const pendingPosts = await getPendingPosts();
+    // Get all active posting schedules
+    const { prisma } = await import('@/lib/prisma');
+    const activeSchedules = await prisma.postingSchedule.findMany({
+      where: { isActive: true },
+      include: { user: true },
+    });
 
-    if (pendingPosts.length === 0) {
+    if (activeSchedules.length === 0) {
       return NextResponse.json({
-        message: 'No posts scheduled for upload',
+        message: 'No active posting schedules found',
         postsProcessed: 0,
       });
     }
 
     const results = [];
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
 
-    for (const post of pendingPosts) {
+    for (const schedule of activeSchedules) {
+      // Check if current time matches any of the posting times
+      const shouldPost = schedule.postingTimes.includes(currentTime);
+
+      if (!shouldPost) {
+        continue;
+      }
+
       try {
-        // Update status to POSTING
-        await updatePostStatus(post.id, 'POSTING');
+        // Generate fresh content for this post
+        const { songs } = await import('@/lib/data/songs');
+        const { getRandomTitle, getRandomHashtags } = await import(
+          '@/lib/data/hashtags'
+        );
+        const { getRandomPhotoFiles, generateImageUrls } = await import(
+          '@/lib/utils'
+        );
+
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        const photoFiles = getRandomPhotoFiles();
+        const imageUrls = generateImageUrls(
+          process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online',
+          photoFiles,
+          randomSong
+        );
+        const title = getRandomTitle();
+        const hashtags = getRandomHashtags().join(' ');
 
         // Create TikTok carousel payload
         const payload = createCarouselPayload(
-          post.title,
-          { id: 'temp', name: post.song, lyrics: '' }, // Add required id field
-          post.hashtags.split(' '),
-          post.imageUrls
+          title,
+          { id: 'temp', name: randomSong.name, lyrics: '' },
+          hashtags.split(' '),
+          imageUrls
         );
 
         // Post to TikTok
@@ -42,7 +75,7 @@ export async function GET(request: NextRequest) {
           payload,
           {
             headers: {
-              Authorization: `Bearer ${post.user.tiktokAccessToken}`,
+              Authorization: `Bearer ${schedule.user.tiktokAccessToken}`,
               'Content-Type': 'application/json; charset=UTF-8',
             },
           }
@@ -51,43 +84,40 @@ export async function GET(request: NextRequest) {
         const publishId = response.data.data?.publish_id;
 
         if (publishId) {
-          // Update with publish ID
-          await updatePostStatus(post.id, 'POSTED', publishId, 'PUBLISHED');
+          // Log the successful post (optional - you can store this in DB if needed)
+          console.log(
+            `Successfully posted for user ${schedule.userId} at ${currentTime}`
+          );
 
           results.push({
-            postId: post.id,
+            userId: schedule.userId,
             status: 'success',
             publishId,
-            title: post.title,
+            title,
+            song: randomSong.name,
+            postedAt: now.toISOString(),
           });
         } else {
           throw new Error('No publish ID returned from TikTok');
         }
       } catch (error: any) {
         console.error(
-          `Failed to post ${post.id}:`,
+          `Failed to post for user ${schedule.userId} at ${currentTime}:`,
           error.response?.data || error.message
         );
 
-        await updatePostStatus(
-          post.id,
-          'FAILED',
-          undefined,
-          'FAILED',
-          error.response?.data?.error?.message || error.message
-        );
-
         results.push({
-          postId: post.id,
+          userId: schedule.userId,
           status: 'failed',
           error: error.response?.data?.error?.message || error.message,
-          title: post.title,
+          title: 'Failed to generate',
+          postedAt: now.toISOString(),
         });
       }
     }
 
     return NextResponse.json({
-      message: `Processed ${results.length} posts`,
+      message: `Processed ${results.length} posts at ${currentTime}`,
       postsProcessed: results.length,
       results,
     });

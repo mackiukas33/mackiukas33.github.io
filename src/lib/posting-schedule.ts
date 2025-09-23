@@ -55,9 +55,7 @@ export async function createPostingSchedule(data: PostingScheduleData) {
     },
   });
 
-  // Generate posts for the next 7 days
-  await generateScheduledPosts(data.userId);
-
+  // No need to pre-generate posts - they'll be created on-demand at posting times
   return schedule;
 }
 
