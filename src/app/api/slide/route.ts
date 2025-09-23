@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
       // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-        ctx.font = '36px Inter, 36px sans-serif';
+      ctx.font = '36px Inter, 36px sans-serif';
       const lineHeight = 46;
       const innerPad = 40;
       const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
@@ -256,7 +256,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Try maximum quality to see if that fixes the tiny file size
-    const buffer = canvas.toBuffer('image/jpeg', 1.0);
+    const buffer = canvas.toBuffer('image/jpeg');
 
     // Debug: Log file size for TikTok compatibility
     const fileSizeKB = Math.round(buffer.length / 1024);
