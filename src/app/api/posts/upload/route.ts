@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         // Create TikTok carousel payload
         const payload = createCarouselPayload(
           post.title,
-          { name: post.song, lyrics: '' }, // We don't need lyrics for posting
+          { id: 'temp', name: post.song, lyrics: '' }, // Add required id field
           post.hashtags.split(' '),
           post.imageUrls
         );

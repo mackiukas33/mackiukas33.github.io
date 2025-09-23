@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         // Create TikTok carousel payload
         const payload = createCarouselPayload(
           post.title,
-          { name: post.song, lyrics: '' },
+          { id: 'temp', name: post.song, lyrics: '' }, // Add required id field
           post.hashtags.split(' '),
           post.imageUrls
         );
