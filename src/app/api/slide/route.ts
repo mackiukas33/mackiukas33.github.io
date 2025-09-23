@@ -319,8 +319,8 @@ export async function GET(request: NextRequest) {
     console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
     console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
 
-    // Fix JPEG compression issue - ensure no transparency and proper quality
-    const buffer = canvas.toBuffer('image/jpeg', 0.95);
+    // Try maximum quality to see if that fixes the tiny file size
+    const buffer = canvas.toBuffer('image/jpeg', 1.0);
 
     // Debug: Log file size for TikTok compatibility
     const fileSizeKB = Math.round(buffer.length / 1024);
