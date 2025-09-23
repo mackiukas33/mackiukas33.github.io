@@ -274,9 +274,17 @@ export async function GET(request: NextRequest) {
       ctx.textAlign = 'center';
 
       // Vertically center text inside the overlay
-      const textStartY = panelY + (panelH - totalHeight) / 2 + fontSize / 2;
+      ctx.textBaseline = 'middle'; // <-- middle alignment
+
+      // Vertical center of the panel
+      const panelCenterY = panelY + panelH / 2;
+
+      // Start drawing lines from center, shifting each line up/down
       for (let i = 0; i < lines.length; i++) {
-        const y = textStartY + i * fontSize * lineSpacing;
+        // Compute the Y offset for each line
+        const lineOffset =
+          (i - (lines.length - 1) / 2) * fontSize * lineSpacing;
+        const y = panelCenterY + lineOffset;
         ctx.strokeText(lines[i], width / 2, y);
         ctx.fillText(lines[i], width / 2, y);
       }
