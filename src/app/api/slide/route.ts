@@ -248,26 +248,15 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Use the best font size and lines, then reduce by 30%
+      12; // Use the best font size and lines, then reduce by 30%
       fontSize = Math.floor(bestFontSize * 0.7); // 30% reduction
       ctx.font = `${fontSize}px ${baseFont}`;
       const lines = bestLines;
       const totalHeight = lines.length * fontSize * lineSpacing;
 
-      // Draw shadow box behind lyrics - account for gem icon if present
+      // Draw shadow box behind lyrics - keep overlay centered
       const panelH = totalHeight + innerPad * 2;
-      let panelY;
-
-      if (variant === 'lyrics') {
-        // For lyrics slide, position below the gem icon but higher up
-        const gemBottom = 250; // gem starts at 130 + 120 size = 250
-        const footerSpace = 200; // space for footer
-        const availableHeight = height - gemBottom - footerSpace;
-        panelY = gemBottom + Math.floor((availableHeight - panelH) / 3); // Use 1/3 instead of 1/2 to move higher
-      } else {
-        // For other slides, center normally
-        panelY = Math.floor((height - panelH) / 2);
-      }
+      const panelY = Math.floor((height - panelH) / 2); // Always center the overlay
 
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#000000';
@@ -281,9 +270,17 @@ export async function GET(request: NextRequest) {
       ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
 
-      // Perfectly center text vertically within the shadow box
+      // Center text within the shadow box, accounting for gem icon if present
       const totalTextHeight = lines.length * fontSize * lineSpacing;
-      const textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
+      let textStartY;
+
+      if (variant === 'lyrics') {
+        // For lyrics slide, position text higher in the overlay to avoid gem overlap
+        textStartY = panelY + innerPad + fontSize * 0.5; // Start higher in the box
+      } else {
+        // For other slides, center normally
+        textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
+      }
 
       for (let i = 0; i < lines.length; i++) {
         const y = textStartY + i * fontSize * lineSpacing;
