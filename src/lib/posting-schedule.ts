@@ -5,11 +5,11 @@ import { getRandomPhotoFiles, generateImageUrls } from './utils';
 
 // Optimal TikTok posting times (5 times per day)
 const OPTIMAL_POSTING_TIMES = [
+  '00:00', // 12 AM (midnight) - FOR TESTING
   '09:00', // 9 AM
   '12:00', // 12 PM (noon)
   '15:00', // 3 PM
   '18:00', // 6 PM
-  '21:00', // 9 PM
 ];
 
 export interface PostingScheduleData {

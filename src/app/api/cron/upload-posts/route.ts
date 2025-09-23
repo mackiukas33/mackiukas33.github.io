@@ -69,9 +69,12 @@ export async function GET(request: NextRequest) {
           imageUrls
         );
 
-        // Post to TikTok
+        console.log('Posting carousel to TikTok API...');
+        console.log('Carousel payload:', JSON.stringify(payload, null, 2));
+
+        // Post to TikTok using the correct carousel endpoint
         const response = await axios.post(
-          'https://open.tiktokapis.com/v2/post/publish/video/init/',
+          'https://open.tiktokapis.com/v2/post/publish/content/init/',
           payload,
           {
             headers: {
@@ -81,6 +84,7 @@ export async function GET(request: NextRequest) {
           }
         );
 
+        console.log('TikTok API response:', response.data);
         const publishId = response.data.data?.publish_id;
 
         if (publishId) {

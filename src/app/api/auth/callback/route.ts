@@ -5,12 +5,9 @@ import { songs } from '@/lib/data/songs';
 import {
   getRandomPhotoFiles,
   generateImageUrls,
-  createCarouselPayload,
   getRandomSong,
   generatePostContent,
-  sleep,
 } from '@/lib/utils';
-import { TikTokPublishStatus } from '@/types';
 import { setSessionCookie, SessionData } from '@/lib/session';
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -50,10 +47,15 @@ export async function GET(request: NextRequest) {
     const refreshToken = tokenRes.data.refresh_token;
     const expiresIn = tokenRes.data.expires_in || 86400; // Default to 24 hours
 
-    // Generate a proper MongoDB ObjectID (24-character hex string)
-    const userId = Array.from({ length: 24 }, () =>
-      Math.floor(Math.random() * 16).toString(16)
-    ).join('');
+    // Generate a consistent user ID based on the access token (first 24 chars of hash)
+    const crypto = require('crypto');
+    const userId = crypto
+      .createHash('sha256')
+      .update(accessToken)
+      .digest('hex')
+      .substring(0, 24);
+
+    console.log('Generated consistent userId:', userId);
 
     // Store session data
     const sessionData: SessionData = {
@@ -64,75 +66,17 @@ export async function GET(request: NextRequest) {
       userId,
     };
 
-    let publish: any;
-    let statusChecks: TikTokPublishStatus[] = [];
-
-    // COMMENTED OUT FOR TESTING - TikTok posting disabled
-    /*
-    try {
-      publish = await postCarousel(accessToken);
-
-      // Poll publish status
-      const publishId = publish.api?.data?.publish_id;
-      if (publishId) {
-        console.log('Publish ID:', publishId);
-        for (let i = 0; i < 4; i++) {
-          const status = await getPublishStatus(accessToken, publishId);
-          statusChecks.push(status);
-          console.log(`Status check ${i + 1}:`, status);
-
-          // Stop early if status indicates completion
-          const statusType = status?.data?.status;
-          if (
-            statusType &&
-            ['PUBLISHED', 'FAILED', 'CANCELLED'].includes(statusType)
-          ) {
-            console.log('Final status:', statusType);
-            break;
-          }
-          await sleep(2000);
-        }
-      } else {
-        console.log('No publish ID received from TikTok API');
-        statusChecks.push({
-          data: {
-            status: 'FAILED' as const,
-            publish_id: 'unknown',
-          },
-          error: {
-            code: 'NO_PUBLISH_ID',
-            message: 'TikTok API did not return a publish ID',
-          },
-        });
-      }
-    } catch (e: any) {
-      console.error(
-        'Carousel posting failed:',
-        e.response?.status,
-        e.response?.data || e.message
-      );
-      statusChecks.push({
-        data: {
-          status: 'FAILED' as const,
-          publish_id: 'unknown',
-        },
-        error: {
-          code: 'POSTING_ERROR',
-          message:
-            e.response?.data?.message || e.message || 'Unknown posting error',
-        },
-      });
-    }
-    */
+    // TikTok posting is now handled by the cron job system
+    // No immediate posting needed here
 
     // Generate images for success page display
     console.log('Generating images for success page...');
     const imageData = await generatePreviewImages();
 
-    // Redirect to success page with image data (posting disabled for testing)
+    // Redirect to success page with image data
     const successUrl = new URL('/success', BASE_URL);
     successUrl.searchParams.set('generated', 'true');
-    successUrl.searchParams.set('posted', 'false'); // Disabled for testing
+    successUrl.searchParams.set('posted', 'false'); // Posting handled by cron job
     successUrl.searchParams.set('title', encodeURIComponent(imageData.title));
     successUrl.searchParams.set('song', encodeURIComponent(imageData.song));
     successUrl.searchParams.set(
@@ -147,22 +91,7 @@ export async function GET(request: NextRequest) {
     successUrl.searchParams.set('song_url', imageData.imageUrls[1]);
     successUrl.searchParams.set('lyrics_url', imageData.imageUrls[2]);
 
-    // Publish status disabled for testing
-    /*
-    const finalStatus = statusChecks[statusChecks.length - 1];
-    if (finalStatus) {
-      successUrl.searchParams.set(
-        'publish_status',
-        finalStatus.data?.status || 'UNKNOWN'
-      );
-      if (finalStatus.error) {
-        successUrl.searchParams.set(
-          'publish_error',
-          encodeURIComponent(finalStatus.error.message)
-        );
-      }
-    }
-    */
+    // Publish status not needed - posting handled by cron job
 
     // Create response with session cookie
     const response = NextResponse.redirect(successUrl);
@@ -178,46 +107,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(err.response?.data || { error: err.message }, {
       status: 500,
     });
-  }
-}
-
-async function postCarousel(accessToken: string) {
-  const song = getRandomSong(songs);
-  const photoFiles = getRandomPhotoFiles();
-  // Use the verified domain for image URLs
-  const imageUrls = generateImageUrls(
-    'https://ttphotos.online',
-    photoFiles,
-    song
-  );
-  const { title, hashtags } = generatePostContent();
-
-  const payload = createCarouselPayload(title, song, hashtags, imageUrls);
-
-  console.log('Posting carousel to TikTok API...');
-  console.log('Carousel payload:', JSON.stringify(payload, null, 2));
-
-  try {
-    const resp = await axios.post(
-      'https://open.tiktokapis.com/v2/post/publish/content/init/',
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-      }
-    );
-
-    console.log('TikTok API response:', resp.data);
-    return { api: resp.data, imageUrls };
-  } catch (error: any) {
-    console.error(
-      'TikTok posting error:',
-      error.response?.status,
-      error.response?.data
-    );
-    throw error;
   }
 }
 
@@ -239,21 +128,4 @@ async function generatePreviewImages() {
       { variant: 'lyrics', url: imageUrls[2], description: 'Lyrics slide' },
     ],
   };
-}
-
-async function getPublishStatus(
-  accessToken: string,
-  publishId: string
-): Promise<TikTokPublishStatus> {
-  const resp = await axios.post(
-    'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
-    { publish_id: publishId },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-    }
-  );
-  return resp.data;
 }
