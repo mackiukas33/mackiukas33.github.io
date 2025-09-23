@@ -248,7 +248,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      12; // Use the best font size and lines, then reduce by 30%
       fontSize = Math.floor(bestFontSize * 0.7); // 30% reduction
       ctx.font = `${fontSize}px ${baseFont}`;
       const lines = bestLines;
@@ -274,13 +273,8 @@ export async function GET(request: NextRequest) {
       const totalTextHeight = lines.length * fontSize * lineSpacing;
       let textStartY;
 
-      if (variant === 'lyrics') {
-        // For lyrics slide, position text higher in the overlay to avoid gem overlap
-        textStartY = panelY + innerPad + fontSize * 0.5; // Start higher in the box
-      } else {
-        // For other slides, center normally
-        textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
-      }
+      // For other slides, center normally
+      textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
 
       for (let i = 0; i < lines.length; i++) {
         const y = textStartY + i * fontSize * lineSpacing;
