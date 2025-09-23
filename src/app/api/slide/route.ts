@@ -259,10 +259,11 @@ export async function GET(request: NextRequest) {
       let panelY;
 
       if (variant === 'lyrics') {
-        // For lyrics slide, position below the gem icon (which ends at y=250)
+        // For lyrics slide, position below the gem icon but higher up
         const gemBottom = 250; // gem starts at 130 + 120 size = 250
-        const availableHeight = height - gemBottom - 150; // leave space for footer
-        panelY = gemBottom + Math.floor((availableHeight - panelH) / 2);
+        const footerSpace = 200; // space for footer
+        const availableHeight = height - gemBottom - footerSpace;
+        panelY = gemBottom + Math.floor((availableHeight - panelH) / 3); // Use 1/3 instead of 1/2 to move higher
       } else {
         // For other slides, center normally
         panelY = Math.floor((height - panelH) / 2);
