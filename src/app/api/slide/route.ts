@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
       // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-        ctx.font = '480px Inter, 480px sans-serif';
+      ctx.font = '480px Inter, 480px sans-serif';
       const lineHeight = 600;
       const innerPad = 40;
       const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
