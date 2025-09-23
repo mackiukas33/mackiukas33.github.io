@@ -8,6 +8,10 @@ import axios from 'axios';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔔 /api/check-posts called at:', new Date().toISOString());
+    console.log('🔔 User-Agent:', request.headers.get('user-agent'));
+    console.log('🔔 Referer:', request.headers.get('referer'));
+
     // Get all active posting schedules
     const { prisma } = await import('@/lib/prisma');
     const activeSchedules = await prisma.postingSchedule.findMany({
@@ -30,10 +34,21 @@ export async function GET(request: NextRequest) {
     for (const schedule of activeSchedules) {
       // Check if current hour matches any of the posting hours
       const currentHour = now.getHours();
+      console.log('🔍 Current hour:', currentHour);
+      console.log('🔍 Posting times:', schedule.postingTimes);
+
       const shouldPost = schedule.postingTimes.some((postingTime) => {
         const [postHours] = postingTime.split(':').map(Number);
+        console.log(
+          '🔍 Checking posting time:',
+          postingTime,
+          '-> hour:',
+          postHours
+        );
         return postHours === currentHour;
       });
+
+      console.log('🔍 Should post:', shouldPost);
 
       if (!shouldPost) {
         continue;
