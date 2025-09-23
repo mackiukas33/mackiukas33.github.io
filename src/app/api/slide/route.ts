@@ -172,8 +172,8 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // Draw title (centered). Reduced ~30%
-    ctx.font = '68px InterBold, bold 68px sans-serif';
+    // Draw title (centered) - MASSIVE size for TikTok
+    ctx.font = '880px InterBold, bold 880px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
@@ -194,8 +194,8 @@ export async function GET(request: NextRequest) {
       // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-      ctx.font = '36px Inter, 36px sans-serif';
-      const lineHeight = 46;
+        ctx.font = '480px Inter, 480px sans-serif';
+      const lineHeight = 600;
       const innerPad = 40;
       const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
       const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
@@ -224,8 +224,8 @@ export async function GET(request: NextRequest) {
       ctx.textAlign = 'left';
     }
 
-    // Footer CTA (reduced ~30%)
-    ctx.font = '31px Inter, 31px sans-serif';
+    // Footer CTA - MASSIVE size for TikTok
+    ctx.font = '400px Inter, 400px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
