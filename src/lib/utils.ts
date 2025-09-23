@@ -24,11 +24,17 @@ export function getRandomPhotoFiles(): string[] {
     throw new Error('Need at least 3 photos in /public/photos');
   }
 
-  // Ensure no duplicate photos are selected (shuffle and take first 3 unique)
-  const shuffled = files.sort(() => 0.5 - Math.random());
-  const uniqueSelected = Array.from(new Set(shuffled)).slice(0, 3);
+  // Properly shuffle and select 3 unique photos
+  const shuffled = [...files]; // Create a copy to avoid mutating original
 
-  return uniqueSelected;
+  // Fisher-Yates shuffle algorithm for truly random selection
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Take first 3 unique photos
+  return shuffled.slice(0, 3);
 }
 
 export function generateImageUrls(
