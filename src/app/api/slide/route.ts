@@ -213,51 +213,50 @@ export async function GET(request: NextRequest) {
       const innerPad = 40;
       const maxTextWidth = panelW - innerPad * 2;
 
-      // Start with a large font
-      let fontSize = 140;
+      // Start with a large font and optimize for width usage
+      let fontSize = 120;
       const baseFont = 'Inter, sans-serif';
-      ctx.font = `${fontSize}px ${baseFont}`;
-      let lines = computeWrappedLines(ctx, body, maxTextWidth);
+      const lineSpacing = 1.3;
+      const maxPanelHeight = height * 0.7; // Use more of the available height
 
-      // Scale font to fit max panel height (60% of canvas)
-      const maxPanelHeight = height * 0.6;
-      const lineSpacing = 1.2;
-      let totalHeight = lines.length * fontSize * lineSpacing;
+      let bestFontSize = fontSize;
+      let bestLines: string[] = [];
+      let bestWidthUsage = 0;
 
-      while (totalHeight > maxPanelHeight && fontSize > 40) {
-        fontSize -= 4;
-        ctx.font = `${fontSize}px ${baseFont}`;
-        lines = computeWrappedLines(ctx, body, maxTextWidth);
-        totalHeight = lines.length * fontSize * lineSpacing;
-      }
+      // Try different font sizes to find the one that uses width most effectively
+      for (let testSize = fontSize; testSize >= 40; testSize -= 4) {
+        ctx.font = `${testSize}px ${baseFont}`;
+        const testLines = computeWrappedLines(ctx, body, maxTextWidth);
+        const testHeight = testLines.length * testSize * lineSpacing;
 
-      // Scale horizontally to fit the widest line
-      let widestWidth = 0;
-      for (const line of lines) {
-        const w = ctx.measureText(line).width;
-        if (w > widestWidth) widestWidth = w;
-      }
+        // Skip if too tall
+        if (testHeight > maxPanelHeight) continue;
 
-      while (widestWidth > maxTextWidth && fontSize > 20) {
-        fontSize -= 2;
-        ctx.font = `${fontSize}px ${baseFont}`;
-        lines = computeWrappedLines(ctx, body, maxTextWidth);
+        // Calculate width usage (how much of available width is used)
+        let totalWidthUsed = 0;
+        for (const line of testLines) {
+          totalWidthUsed += ctx.measureText(line).width;
+        }
+        const avgWidthUsage = totalWidthUsed / testLines.length;
+        const widthUsageRatio = avgWidthUsage / maxTextWidth;
 
-        widestWidth = 0;
-        for (const line of lines) {
-          const w = ctx.measureText(line).width;
-          if (w > widestWidth) widestWidth = w;
+        // Prefer font sizes that use more of the available width
+        if (widthUsageRatio > bestWidthUsage) {
+          bestWidthUsage = widthUsageRatio;
+          bestFontSize = testSize;
+          bestLines = testLines;
         }
       }
 
-      // Apply final 0.7 reduction
-      fontSize = Math.floor(fontSize * 0.7);
+      // Use the best font size and lines
+      fontSize = bestFontSize;
       ctx.font = `${fontSize}px ${baseFont}`;
-      totalHeight = lines.length * fontSize * lineSpacing;
+      const lines = bestLines;
+      const totalHeight = lines.length * fontSize * lineSpacing;
 
-      // Draw shadow box behind lyrics
+      // Draw shadow box behind lyrics - properly centered
       const panelH = totalHeight + innerPad * 2;
-      const panelY = Math.max(0, Math.floor((height - panelH) / 2));
+      const panelY = Math.floor((height - panelH) / 2);
 
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#000000';
@@ -271,10 +270,10 @@ export async function GET(request: NextRequest) {
       ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
 
-      // Vertically center text in shadow box
-      const startY = panelY + (panelH - totalHeight) / 2 + fontSize / 2;
+      // Properly center text vertically within the shadow box
+      const textStartY = panelY + innerPad + fontSize;
       for (let i = 0; i < lines.length; i++) {
-        const y = startY + i * fontSize * lineSpacing;
+        const y = textStartY + i * fontSize * lineSpacing;
         ctx.strokeText(lines[i], width / 2, y);
         ctx.fillText(lines[i], width / 2, y);
       }
