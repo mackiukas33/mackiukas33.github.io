@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
     const results = [];
     const now = new Date();
     const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+    const currentHour = now.getHours();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     for (const schedule of activeSchedules) {
-      // Check if current hour matches any of the posting hours
-      const currentHour = now.getHours();
       console.log('🔍 Current hour:', currentHour);
       console.log('🔍 Posting times:', schedule.postingTimes);
 
@@ -51,6 +51,31 @@ export async function GET(request: NextRequest) {
       console.log('🔍 Should post:', shouldPost);
 
       if (!shouldPost) {
+        continue;
+      }
+
+      // Check if we've already posted for this user today at this hour
+      const existingPost = await prisma.scheduledPost.findFirst({
+        where: {
+          userId: schedule.userId,
+          status: 'POSTED',
+          scheduledFor: {
+            gte: new Date(
+              `${today}T${currentHour.toString().padStart(2, '0')}:00:00.000Z`
+            ),
+            lt: new Date(
+              `${today}T${(currentHour + 1)
+                .toString()
+                .padStart(2, '0')}:00:00.000Z`
+            ),
+          },
+        },
+      });
+
+      if (existingPost) {
+        console.log(
+          `⏭️ Already posted for user ${schedule.userId} at hour ${currentHour} today`
+        );
         continue;
       }
 
@@ -93,7 +118,21 @@ export async function GET(request: NextRequest) {
         const publishId = response.data.data?.publish_id;
 
         if (publishId) {
-          // Log the successful post
+          // Log the successful post in the database
+          await prisma.scheduledPost.create({
+            data: {
+              userId: schedule.userId,
+              title,
+              song: randomSong.name,
+              hashtags,
+              imageUrls,
+              scheduledFor: now,
+              status: 'POSTED',
+              tiktokPublishId: publishId,
+              tiktokStatus: 'PUBLISHED',
+            },
+          });
+
           console.log(
             `Successfully posted for user ${schedule.userId} at ${currentTime}`
           );
@@ -114,6 +153,20 @@ export async function GET(request: NextRequest) {
           `Failed to post for user ${schedule.userId} at ${currentTime}:`,
           error.response?.data || error.message
         );
+
+        // Log the failed post in the database
+        await prisma.scheduledPost.create({
+          data: {
+            userId: schedule.userId,
+            title: 'Failed to generate',
+            song: 'Unknown',
+            hashtags: '',
+            imageUrls: [],
+            scheduledFor: now,
+            status: 'FAILED',
+            tiktokError: error.response?.data?.error?.message || error.message,
+          },
+        });
 
         results.push({
           userId: schedule.userId,
