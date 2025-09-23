@@ -84,22 +84,19 @@ export async function GET(request: NextRequest) {
         ? searchParams.get('lyrics')
         : '';
 
-    // HIGH QUALITY CANVAS - RENDER AT FINAL RESOLUTION
+    // HIGH QUALITY CANVAS SETUP (from working commit 9087f20)
     const width = 1080;
     const height = 1920;
 
-    // Create canvas at final TikTok resolution but with high quality settings
-    const canvas = createCanvas(width, height);
+    // Create high-DPI canvas for crisp rendering
+    const scale = 2; // 2x scale for retina quality
+    const canvas = createCanvas(width * scale, height * scale);
     const ctx = canvas.getContext('2d');
 
-    // Enable maximum quality rendering
+    // Enable high-quality rendering
+    ctx.scale(scale, scale);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-
-    // Enhanced text rendering for crisp text
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 15;
 
     // HIGH QUALITY BACKGROUND RENDERING
     try {
@@ -312,8 +309,19 @@ export async function GET(request: NextRequest) {
     ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
+    // CREATE FINAL OUTPUT AT CORRECT TIKTOK DIMENSIONS
+    const outputCanvas = createCanvas(width, height);
+    const outputCtx = outputCanvas.getContext('2d');
+    
+    // Enable high quality scaling
+    outputCtx.imageSmoothingEnabled = true;
+    outputCtx.imageSmoothingQuality = 'high';
+    
+    // Draw the high-resolution canvas onto the output canvas at correct size
+    outputCtx.drawImage(canvas, 0, 0, width, height);
+    
     // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility (under 5MB)
-    const buffer = canvas.toBuffer('image/jpeg', 0.92);
+    const buffer = outputCanvas.toBuffer('image/jpeg', 0.85);
 
     // Debug: Log file size for TikTok compatibility
     const fileSizeKB = Math.round(buffer.length / 1024);
