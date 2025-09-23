@@ -105,9 +105,13 @@ export async function GET(request: NextRequest) {
           (f) => f.endsWith('.jpeg') || f.endsWith('.jpg') || f.endsWith('.png')
         );
 
+      console.log(`Found ${files.length} background images in ${photosDir}`);
+
       if (files.length > 0) {
         const randomBg = files[Math.floor(Math.random() * files.length)];
+        console.log(`Using background image: ${randomBg}`);
         const img = await loadImage(path.join(photosDir, randomBg));
+        console.log(`Loaded image: ${img.width}x${img.height}`);
 
         // Use COVER mode for best quality - fill entire canvas
         const imgRatio = img.width / img.height;
@@ -307,6 +311,10 @@ export async function GET(request: NextRequest) {
     ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
+    // Debug: Check canvas content before output
+    console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
+    console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
+    
     // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility (under 5MB)
     const buffer = canvas.toBuffer('image/jpeg', 0.95);
 
@@ -316,6 +324,12 @@ export async function GET(request: NextRequest) {
     console.log(
       `Generated image: ${width}x${height}, ${fileSizeKB}KB (${fileSizeMB}MB)`
     );
+    
+    // Debug: Check if buffer is too small
+    if (buffer.length < 10000) {
+      console.error('WARNING: Buffer is suspiciously small!');
+      console.log('Buffer length:', buffer.length);
+    }
 
     return new NextResponse(buffer as any, {
       headers: {
