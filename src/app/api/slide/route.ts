@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
         totalHeight = lines.length * fontSize * lineSpacing;
       }
 
-      // 🔹 Scale horizontally to fit the widest line
+      // Scale horizontally to fit the widest line
       let widestWidth = 0;
       for (const line of lines) {
         const w = ctx.measureText(line).width;
@@ -250,8 +250,8 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // 🔹 Apply final 0.5 reduction
-      fontSize = Math.floor(fontSize * 0.5);
+      // Apply final 0.7 reduction
+      fontSize = Math.floor(fontSize * 0.7);
       ctx.font = `${fontSize}px ${baseFont}`;
       totalHeight = lines.length * fontSize * lineSpacing;
 
@@ -271,7 +271,8 @@ export async function GET(request: NextRequest) {
       ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
 
-      const startY = panelY + innerPad + fontSize / 2;
+      // Vertically center text in shadow box
+      const startY = panelY + (panelH - totalHeight) / 2 + fontSize / 2;
       for (let i = 0; i < lines.length; i++) {
         const y = startY + i * fontSize * lineSpacing;
         ctx.strokeText(lines[i], width / 2, y);
