@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     ctx.scale(scale, scale);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    
+
     // Enhanced text rendering for crisp text
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
@@ -317,16 +317,21 @@ export async function GET(request: NextRequest) {
     // CREATE FINAL OUTPUT AT CORRECT TIKTOK DIMENSIONS
     const outputCanvas = createCanvas(width, height);
     const outputCtx = outputCanvas.getContext('2d');
-    
+
     // Enable high quality scaling
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
-    
+
     // Draw the high-resolution canvas onto the output canvas at correct size
     outputCtx.drawImage(canvas, 0, 0, width, height);
+
+    // OPTIMIZED OUTPUT - JPEG for TikTok compatibility (under 5MB)
+    const buffer = outputCanvas.toBuffer('image/jpeg', 0.85);
     
-    // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility
-    const buffer = outputCanvas.toBuffer('image/jpeg', 0.95);
+    // Debug: Log file size for TikTok compatibility
+    const fileSizeKB = Math.round(buffer.length / 1024);
+    const fileSizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
+    console.log(`Generated image: ${width}x${height}, ${fileSizeKB}KB (${fileSizeMB}MB)`);
 
     return new NextResponse(buffer as any, {
       headers: {
