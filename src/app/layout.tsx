@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'TTPhotos - TikTok Carousel Creator v1.0.2',
+  title: 'TTPhotos - TikTok Carousel Crseator v1.0.2',
   description: 'Create and post beautiful TikTok carousels with your music',
 };
 
