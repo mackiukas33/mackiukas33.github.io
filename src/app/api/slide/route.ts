@@ -172,14 +172,14 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // Draw title (centered) - MASSIVE size for TikTok
-    ctx.font = '880px InterBold, bold 880px sans-serif';
+    // Draw title (centered) - Proper size for TikTok
+    ctx.font = '120px InterBold, bold 120px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
     let titleY = 220;
     if (variant === 'intro' || variant === 'song') {
-      titleY = Math.floor((height - 68) / 2);
+      titleY = Math.floor((height - 120) / 2);
     } else if (variant === 'lyrics') {
       titleY = 300;
     }
@@ -194,8 +194,8 @@ export async function GET(request: NextRequest) {
       // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-        ctx.font = '480px Inter, 480px sans-serif';
-      const lineHeight = 600;
+      ctx.font = '80px Inter, 80px sans-serif';
+      const lineHeight = 100;
       const innerPad = 40;
       const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
       const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
@@ -224,14 +224,14 @@ export async function GET(request: NextRequest) {
       ctx.textAlign = 'left';
     }
 
-    // Footer CTA - MASSIVE size for TikTok
-    ctx.font = '400px Inter, 400px sans-serif';
+    // Footer CTA - Proper size for TikTok
+    ctx.font = '60px Inter, 60px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
     ctx.strokeStyle = '#000000';
-    ctx.strokeText('Follow for more underrated gems', width / 2, height - 160);
-    ctx.fillText('Follow for more underrated gems', width / 2, height - 160);
+    ctx.strokeText('Follow for more underrated gems', width / 2, height - 100);
+    ctx.fillText('Follow for more underrated gems', width / 2, height - 100);
     ctx.textAlign = 'left';
     // Debug: Check canvas content before output
     console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
