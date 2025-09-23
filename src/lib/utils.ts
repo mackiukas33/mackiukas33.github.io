@@ -60,7 +60,6 @@ export function createCarouselPayload(
       description: `🎵 ${song.name}\n\n${hashtags.join(' ')}`,
       privacy_level: 'SELF_ONLY',
       disable_comment: false,
-      auto_add_music: true,
     },
     source_info: {
       source: 'PULL_FROM_URL',

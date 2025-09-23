@@ -307,12 +307,12 @@ export async function GET(request: NextRequest) {
     ctx.fillText('Follow for more underrated gems', width / 2, height - 180);
     ctx.textAlign = 'left';
 
-    // HIGH QUALITY OUTPUT - PNG for maximum quality
-    const buffer = canvas.toBuffer('image/png');
+    // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility
+    const buffer = canvas.toBuffer('image/jpeg', 0.95);
 
     return new NextResponse(buffer as any, {
       headers: {
-        'Content-Type': 'image/png',
+        'Content-Type': 'image/jpeg',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
         Pragma: 'no-cache',
         Expires: '0',

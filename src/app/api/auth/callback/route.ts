@@ -29,9 +29,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // CSRF state validation disabled for sandbox testing
-  // In production, you should validate the state parameter
-
   try {
     // Exchange code for access token
     const tokenRes = await axios.post(
@@ -49,9 +46,6 @@ export async function GET(request: NextRequest) {
     );
 
     const accessToken = tokenRes.data.access_token;
-
-    // Post carousel to TikTok
-    console.log('Posting carousel to TikTok...');
     let publish: any;
     let statusChecks: TikTokPublishStatus[] = [];
 

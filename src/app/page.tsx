@@ -17,7 +17,6 @@ export default function Home() {
       const data = await response.json();
 
       if (response.ok && data.authUrl) {
-        // Redirect to TikTok OAuth
         window.location.href = data.authUrl;
       } else {
         setError(data.error || 'Login failed');
