@@ -3,13 +3,13 @@ import { songs } from './data/songs';
 import { getRandomHashtags, getRandomTitle } from './data/hashtags';
 import { getRandomPhotoFiles, generateImageUrls } from './utils';
 
-// Optimal TikTok posting hours (5 times per day)
+// Optimal TikTok posting hours (5 times per day) - UTC+3 timezone
 const OPTIMAL_POSTING_TIMES = [
-  '00:00', // 12 AM (midnight) - FOR TESTING
-  '09:00', // 9 AM
-  '12:00', // 12 PM (noon)
-  '15:00', // 3 PM
-  '18:00', // 6 PM
+  '21:00', // 12 AM (midnight) UTC+3 = 21:00 UTC
+  '06:00', // 9 AM UTC+3 = 06:00 UTC
+  '09:00', // 12 PM (noon) UTC+3 = 09:00 UTC
+  '12:00', // 3 PM UTC+3 = 12:00 UTC
+  '15:00', // 6 PM UTC+3 = 15:00 UTC
 ];
 
 // Generate next posting times for the next 7 days
