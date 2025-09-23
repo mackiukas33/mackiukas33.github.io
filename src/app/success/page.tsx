@@ -172,119 +172,107 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl mb-4">
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 mx-auto bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl mb-6">
             🎨
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Your Carousel is Ready!
-          </h1>
-          <p className="text-white/80 text-lg">
-            {result?.message || 'Beautiful images generated successfully'}
+          <h1 className="text-4xl font-bold text-white mb-4">Dashboard</h1>
+          <p className="text-white/80 text-lg mb-8">
+            {result?.message || 'Welcome to your TTPhotos dashboard'}
           </p>
+
+          {/* Start Uploading Button */}
+          <button
+            onClick={() => {
+              // TODO: Implement upload functionality
+              console.log('Start uploading clicked');
+            }}
+            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg"
+          >
+            Start Uploading
+          </button>
         </div>
 
-        {/* Song Info */}
+        {/* Recent Activity */}
         {result?.images && (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-              <div>
-                <h3 className="text-white/80 text-sm font-medium mb-2">
-                  Title
-                </h3>
-                <p className="text-white font-semibold">
-                  {result.images.title}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-white/80 text-sm font-medium mb-2">Song</h3>
-                <p className="text-white font-semibold">
-                  🎵 {result.images.song}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-white/80 text-sm font-medium mb-2">
-                  Hashtags
-                </h3>
-                <p className="text-white font-semibold text-sm">
-                  {result.images.hashtags}
-                </p>
+            <h2 className="text-xl font-bold text-white mb-4">
+              Recent Activity
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                    🎵
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">
+                      {result.images.title}
+                    </p>
+                    <p className="text-white/60 text-sm">
+                      {result.images.song}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-green-400 text-sm font-medium">
+                    Generated
+                  </p>
+                  <p className="text-white/60 text-xs">Just now</p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Image Gallery */}
+        {/* Quick Preview */}
         {result?.images?.variants && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">
-              Generated Slides
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <h2 className="text-xl font-bold text-white mb-4">Quick Preview</h2>
+            <div className="grid grid-cols-3 gap-4">
               {result.images.variants.map((variant, index) => (
                 <div
                   key={index}
-                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6"
+                  className="bg-white/10 backdrop-blur-lg rounded-xl p-4 text-center"
                 >
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">
-                      {variant.description}
-                    </h3>
-                    <div className="inline-block bg-white/20 text-white/80 text-xs px-3 py-1 rounded-full">
-                      {variant.variant.toUpperCase()}
-                    </div>
+                  <div className="aspect-[9/16] bg-black/20 rounded-lg overflow-hidden mb-3">
+                    <img
+                      src={variant.url}
+                      alt={variant.description}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center text-white/60">
+                              <div class="text-2xl">🖼️</div>
+                            </div>
+                          `;
+                        }
+                      }}
+                    />
                   </div>
-
-                  {/* Image Container */}
-                  <div className="relative group">
-                    <div className="aspect-[9/16] bg-black/20 rounded-xl overflow-hidden shadow-2xl">
-                      <img
-                        src={variant.url}
-                        alt={variant.description}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `
-                              <div class="w-full h-full flex items-center justify-center text-white/60">
-                                <div class="text-center">
-                                  <div class="text-4xl mb-2">🖼️</div>
-                                  <p class="text-sm">Loading image...</p>
-                                </div>
-                              </div>
-                            `;
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {/* Overlay on hover */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center">
-                      <button
-                        onClick={() => window.open(variant.url, '_blank')}
-                        className="bg-white/20 hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
-                      >
-                        View Full Size
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-white/80 text-sm font-medium">
+                    {variant.description}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+        {/* Dashboard Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             onClick={() => (window.location.href = '/')}
-            className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
           >
-            Create Another
+            <span>🔄</span>
+            <span>Create New Carousel</span>
           </button>
           <button
             onClick={() => {
@@ -296,9 +284,10 @@ function SuccessContent() {
                 alert('Image URLs copied to clipboard!');
               }
             }}
-            className="flex-1 bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
           >
-            Copy URLs
+            <span>📋</span>
+            <span>Copy URLs</span>
           </button>
         </div>
 
