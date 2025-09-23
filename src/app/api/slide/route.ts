@@ -248,8 +248,8 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Use the best font size and lines
-      fontSize = bestFontSize;
+      // Use the best font size and lines, then reduce by 30%
+      fontSize = Math.floor(bestFontSize * 0.7); // 30% reduction
       ctx.font = `${fontSize}px ${baseFont}`;
       const lines = bestLines;
       const totalHeight = lines.length * fontSize * lineSpacing;
@@ -270,8 +270,10 @@ export async function GET(request: NextRequest) {
       ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
 
-      // Properly center text vertically within the shadow box
-      const textStartY = panelY + innerPad + fontSize;
+      // Perfectly center text vertically within the shadow box
+      const totalTextHeight = lines.length * fontSize * lineSpacing;
+      const textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
+
       for (let i = 0; i < lines.length; i++) {
         const y = textStartY + i * fontSize * lineSpacing;
         ctx.strokeText(lines[i], width / 2, y);
