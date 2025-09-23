@@ -95,6 +95,10 @@ export async function GET(request: NextRequest) {
     // Enable maximum quality rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    
+    // Fill canvas with solid background to ensure no transparency
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, width, height);
 
     // HIGH QUALITY BACKGROUND RENDERING
     try {
@@ -314,9 +318,9 @@ export async function GET(request: NextRequest) {
     // Debug: Check canvas content before output
     console.log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
     console.log(`Canvas data URL length: ${canvas.toDataURL().length}`);
-    
-    // HIGH QUALITY OUTPUT - JPEG for TikTok compatibility (under 5MB)
-    const buffer = canvas.toBuffer('image/jpeg', 0.95);
+
+    // Fix JPEG compression issue - ensure no transparency and proper quality
+    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
 
     // Debug: Log file size for TikTok compatibility
     const fileSizeKB = Math.round(buffer.length / 1024);
@@ -324,7 +328,7 @@ export async function GET(request: NextRequest) {
     console.log(
       `Generated image: ${width}x${height}, ${fileSizeKB}KB (${fileSizeMB}MB)`
     );
-    
+
     // Debug: Check if buffer is too small
     if (buffer.length < 10000) {
       console.error('WARNING: Buffer is suspiciously small!');
