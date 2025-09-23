@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/hooks/useSession';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { authenticated, loading } = useSession();
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to dashboard
+    if (authenticated && !loading) {
+      router.push('/success');
+    }
+  }, [authenticated, loading, router]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -27,6 +36,22 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking session
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+            <h1 className="text-xl font-bold text-white">
+              Checking session...
+            </h1>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">

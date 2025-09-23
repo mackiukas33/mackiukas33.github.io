@@ -11,6 +11,7 @@ import {
   sleep,
 } from '@/lib/utils';
 import { TikTokPublishStatus } from '@/types';
+import { setSessionCookie, SessionData } from '@/lib/session';
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
 const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
@@ -46,6 +47,17 @@ export async function GET(request: NextRequest) {
     );
 
     const accessToken = tokenRes.data.access_token;
+    const refreshToken = tokenRes.data.refresh_token;
+    const expiresIn = tokenRes.data.expires_in || 86400; // Default to 24 hours
+
+    // Store session data
+    const sessionData: SessionData = {
+      accessToken,
+      refreshToken,
+      expiresAt: Date.now() + expiresIn * 1000,
+      scope: tokenRes.data.scope,
+    };
+
     let publish: any;
     let statusChecks: TikTokPublishStatus[] = [];
 
@@ -146,7 +158,11 @@ export async function GET(request: NextRequest) {
     }
     */
 
-    return NextResponse.redirect(successUrl);
+    // Create response with session cookie
+    const response = NextResponse.redirect(successUrl);
+    setSessionCookie(response, sessionData);
+
+    return response;
   } catch (err: any) {
     console.error(
       'Token error:',

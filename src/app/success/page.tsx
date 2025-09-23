@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from '@/hooks/useSession';
 
 interface ImageVariant {
   variant: string;
@@ -26,6 +27,7 @@ function SuccessContent() {
   const [result, setResult] = useState<ImageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { authenticated, logout } = useSession();
 
   useEffect(() => {
     // Get data from URL params (from OAuth callback) or use demo data
@@ -175,6 +177,16 @@ function SuccessContent() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
+          {/* Logout Button */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={logout}
+              className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white font-medium py-2 px-4 rounded-lg transition-all duration-200"
+            >
+              Logout
+            </button>
+          </div>
+
           <div className="w-20 h-20 mx-auto bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl mb-6">
             🎨
           </div>
