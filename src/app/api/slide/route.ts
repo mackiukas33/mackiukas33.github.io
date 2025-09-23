@@ -254,9 +254,19 @@ export async function GET(request: NextRequest) {
       const lines = bestLines;
       const totalHeight = lines.length * fontSize * lineSpacing;
 
-      // Draw shadow box behind lyrics - properly centered
+      // Draw shadow box behind lyrics - account for gem icon if present
       const panelH = totalHeight + innerPad * 2;
-      const panelY = Math.floor((height - panelH) / 2);
+      let panelY;
+
+      if (variant === 'lyrics') {
+        // For lyrics slide, position below the gem icon (which ends at y=250)
+        const gemBottom = 250; // gem starts at 130 + 120 size = 250
+        const availableHeight = height - gemBottom - 150; // leave space for footer
+        panelY = gemBottom + Math.floor((availableHeight - panelH) / 2);
+      } else {
+        // For other slides, center normally
+        panelY = Math.floor((height - panelH) / 2);
+      }
 
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#000000';
