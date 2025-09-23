@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------
     // Title (centered, dynamic size)
     // ---------------------------
-    let titleFontSize = 160;
+    let titleFontSize = 160 * 0.7;
     ctx.font = `bold ${titleFontSize}px InterBold, sans-serif`;
 
     // Scale title if too wide
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
       const maxTextWidth = panelW - innerPad * 2;
 
       // Start with a large font
-      let fontSize = 140;
+      let fontSize = 140 * 0.7;
       ctx.font = `${fontSize}px Inter, sans-serif`;
       let lines = computeWrappedLines(ctx, body, maxTextWidth);
 
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------
     // Footer CTA (dynamic scaling)
     // ---------------------------
-    let footerFontSize = 90;
+    let footerFontSize = 90 * 0.7;
     ctx.font = `${footerFontSize}px Inter, sans-serif`;
 
     // Scale footer if too wide
