@@ -69,28 +69,47 @@ export async function stopPostingSchedule(userId: string) {
 }
 
 export async function getPostingSchedule(userId: string) {
-  const schedule = await prisma.postingSchedule.findUnique({
-    where: { userId },
-    include: {
-      user: true,
-    },
-  });
+  try {
+    const schedule = await prisma.postingSchedule.findUnique({
+      where: { userId },
+      include: {
+        user: true,
+      },
+    });
 
-  if (!schedule) return null;
+    // Get pending posts separately
+    const scheduledPosts = await prisma.scheduledPost.findMany({
+      where: {
+        userId,
+        status: 'PENDING',
+      },
+      orderBy: { scheduledFor: 'asc' },
+    });
 
-  // Get pending posts separately
-  const scheduledPosts = await prisma.scheduledPost.findMany({
-    where: {
-      userId,
-      status: 'PENDING',
-    },
-    orderBy: { scheduledFor: 'asc' },
-  });
+    if (!schedule) {
+      // Return default schedule structure when none exists
+      return {
+        id: null,
+        userId,
+        isActive: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        postingTimes: [],
+        postsPerDay: 5,
+        timezone: 'UTC',
+        user: null,
+        scheduledPosts,
+      };
+    }
 
-  return {
-    ...schedule,
-    scheduledPosts,
-  };
+    return {
+      ...schedule,
+      scheduledPosts,
+    };
+  } catch (error) {
+    console.error('Error in getPostingSchedule:', error);
+    throw error;
+  }
 }
 
 async function generateScheduledPosts(userId: string) {
