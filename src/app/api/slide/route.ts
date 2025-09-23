@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     // Enable maximum quality rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    
+
     // Enhanced text rendering for crisp text
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';

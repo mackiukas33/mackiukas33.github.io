@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
     let publish: any;
     let statusChecks: TikTokPublishStatus[] = [];
 
+    // COMMENTED OUT FOR TESTING - TikTok posting disabled
+    /*
     try {
       publish = await postCarousel(accessToken);
 
@@ -103,15 +105,16 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+    */
 
     // Generate images for success page display
     console.log('Generating images for success page...');
     const imageData = await generatePreviewImages();
 
-    // Redirect to success page with image data and posting status
+    // Redirect to success page with image data (posting disabled for testing)
     const successUrl = new URL('/success', BASE_URL);
     successUrl.searchParams.set('generated', 'true');
-    successUrl.searchParams.set('posted', 'true');
+    successUrl.searchParams.set('posted', 'false'); // Disabled for testing
     successUrl.searchParams.set('title', encodeURIComponent(imageData.title));
     successUrl.searchParams.set('song', encodeURIComponent(imageData.song));
     successUrl.searchParams.set(
@@ -126,7 +129,8 @@ export async function GET(request: NextRequest) {
     successUrl.searchParams.set('song_url', imageData.imageUrls[1]);
     successUrl.searchParams.set('lyrics_url', imageData.imageUrls[2]);
 
-    // Add publish status information
+    // Publish status disabled for testing
+    /*
     const finalStatus = statusChecks[statusChecks.length - 1];
     if (finalStatus) {
       successUrl.searchParams.set(
@@ -140,6 +144,7 @@ export async function GET(request: NextRequest) {
         );
       }
     }
+    */
 
     return NextResponse.redirect(successUrl);
   } catch (err: any) {
