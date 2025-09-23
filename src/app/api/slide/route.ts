@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import fs from 'fs';
 import path from 'path';
 import { songs } from '@/lib/data/songs';
@@ -7,14 +7,8 @@ import { songs } from '@/lib/data/songs';
 // Register fonts
 try {
   const fontsDir = path.join(process.cwd(), 'public', 'fonts');
-  GlobalFonts.registerFromPath(
-    path.join(fontsDir, 'Inter-Regular.ttf'),
-    'Inter'
-  );
-  GlobalFonts.registerFromPath(
-    path.join(fontsDir, 'Inter-Bold.ttf'),
-    'InterBold'
-  );
+  registerFont(path.join(fontsDir, 'Inter-Regular.ttf'), { family: 'Inter' });
+  registerFont(path.join(fontsDir, 'Inter-Bold.ttf'), { family: 'InterBold' });
 } catch (e: any) {
   console.warn('Font registration failed:', e.message);
 }
@@ -179,9 +173,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Draw title (centered) - MASSIVE size for TikTok
-    ctx.font = GlobalFonts.has('InterBold')
-      ? '880px InterBold'
-      : 'bold 880px sans-serif';
+    ctx.font = '880px InterBold, bold 880px sans-serif';
     const titleMetrics = ctx.measureText(title);
     const titleRenderWidth = Math.min(titleMetrics.width, maxTextWidth);
     const titleX = (width - titleRenderWidth) / 2;
@@ -202,7 +194,7 @@ export async function GET(request: NextRequest) {
       // Lyrics panel: center text within a fitted shadow box
       const panelX = margin;
       const panelW = width - margin * 2;
-        ctx.font = GlobalFonts.has('Inter') ? '480px Inter' : '480px sans-serif';
+        ctx.font = '480px Inter, 480px sans-serif';
       const lineHeight = 600;
       const innerPad = 40;
       const lines = computeWrappedLines(ctx, body, panelW - innerPad * 2);
@@ -233,7 +225,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Footer CTA - MASSIVE size for TikTok
-    ctx.font = GlobalFonts.has('Inter') ? '400px Inter' : '400px sans-serif';
+    ctx.font = '400px Inter, 400px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
