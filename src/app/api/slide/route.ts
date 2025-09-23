@@ -207,13 +207,16 @@ export async function GET(request: NextRequest) {
     // ---------------------------
     // Lyrics / Body (dynamic scaling)
     // ---------------------------
+    // ---------------------------
+    // Lyrics / Body (dynamic scaling)
+    // ---------------------------
     if (body) {
       const panelX = margin;
       const panelW = width - margin * 2;
       const innerPad = 40;
       const maxTextWidth = panelW - innerPad * 2;
 
-      // Start with a large font and optimize for width usage
+      // Start with a large font
       let fontSize = 120;
       const baseFont = 'Inter, sans-serif';
       const lineSpacing = 1.3;
@@ -233,12 +236,12 @@ export async function GET(request: NextRequest) {
         if (testHeight > maxPanelHeight) continue;
 
         // Calculate width usage (how much of available width is used)
-        let totalWidthUsed = 0;
+        let widestLineWidth = 0;
         for (const line of testLines) {
-          totalWidthUsed += ctx.measureText(line).width;
+          const w = ctx.measureText(line).width;
+          if (w > widestLineWidth) widestLineWidth = w;
         }
-        const avgWidthUsage = totalWidthUsed / testLines.length;
-        const widthUsageRatio = avgWidthUsage / maxTextWidth;
+        const widthUsageRatio = widestLineWidth / maxTextWidth;
 
         // Prefer font sizes that use more of the available width
         if (widthUsageRatio > bestWidthUsage) {
@@ -248,14 +251,15 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      fontSize = Math.floor(bestFontSize * 0.7); // 30% reduction
+      // Apply final 0.7 reduction
+      fontSize = Math.floor(bestFontSize * 0.7);
       ctx.font = `${fontSize}px ${baseFont}`;
       const lines = bestLines;
       const totalHeight = lines.length * fontSize * lineSpacing;
 
-      // Draw shadow box behind lyrics - keep overlay centered
+      // Draw shadow box behind lyrics - overlay centered
       const panelH = totalHeight + innerPad * 2;
-      const panelY = Math.floor((height - panelH) / 2); // Always center the overlay
+      const panelY = Math.floor((height - panelH) / 2);
 
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#000000';
@@ -269,13 +273,8 @@ export async function GET(request: NextRequest) {
       ctx.lineWidth = Math.floor(fontSize / 16);
       ctx.textAlign = 'center';
 
-      // Center text within the shadow box, accounting for gem icon if present
-      const totalTextHeight = lines.length * fontSize * lineSpacing;
-      let textStartY;
-
-      // For other slides, center normally
-      textStartY = panelY + (panelH - totalTextHeight) / 2 + fontSize;
-
+      // Vertically center text inside the overlay
+      const textStartY = panelY + (panelH - totalHeight) / 2 + fontSize / 2;
       for (let i = 0; i < lines.length; i++) {
         const y = textStartY + i * fontSize * lineSpacing;
         ctx.strokeText(lines[i], width / 2, y);
