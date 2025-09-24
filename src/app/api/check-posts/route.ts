@@ -55,33 +55,51 @@ export async function GET(request: NextRequest) {
       }
 
       // Check if we've already posted for this user today at this hour
-      const existingPost = await prisma.scheduledPost.findFirst({
+      const existingPost = await prisma.scheduledPost.findUnique({
         where: {
           userId: schedule.userId,
-          status: 'POSTED',
-          scheduledFor: {
-            gte: new Date(
-              `${today}T${currentHour.toString().padStart(2, '0')}:00:00.000Z`
-            ),
-            lt: new Date(
-              `${today}T${(currentHour + 1)
-                .toString()
-                .padStart(2, '0')}:00:00.000Z`
-            ),
-          },
         },
       });
 
-      if (existingPost) {
-        console.log(
-          `⏭️ Already posted for user ${schedule.userId} at hour ${currentHour} today`
-        );
-        continue;
+      if (existingPost && existingPost.status === 'POSTED') {
+        const postHour = existingPost.scheduledFor.getHours();
+        const postDate = existingPost.scheduledFor.toISOString().split('T')[0];
+
+        if (postDate === today && postHour === currentHour) {
+          console.log(
+            `⏭️ Already posted for user ${schedule.userId} at hour ${currentHour} today`
+          );
+          continue;
+        }
       }
 
       try {
         // Generate fresh content for this post
-        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        // Avoid using the same song as the last post
+        let availableSongs = songs;
+        if (existingPost && existingPost.song) {
+          availableSongs = songs.filter(
+            (song) => song.name !== existingPost.song
+          );
+          // If all songs were used, fall back to all songs
+          if (availableSongs.length === 0) {
+            availableSongs = songs;
+          }
+        }
+
+        const randomSong =
+          availableSongs[Math.floor(Math.random() * availableSongs.length)];
+        console.log(
+          'Selected song:',
+          randomSong.name,
+          'from',
+          availableSongs.length,
+          'available songs',
+          existingPost
+            ? `(last song was: ${existingPost.song})`
+            : '(no previous posts)'
+        );
+
         const photoFiles = getRandomPhotoFiles();
         const imageUrls = generateImageUrls(
           process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online',
@@ -118,9 +136,23 @@ export async function GET(request: NextRequest) {
         const publishId = response.data.data?.publish_id;
 
         if (publishId) {
-          // Log the successful post in the database
-          await prisma.scheduledPost.create({
-            data: {
+          // Upsert the most recent post record (replace previous one)
+          await prisma.scheduledPost.upsert({
+            where: {
+              userId: schedule.userId,
+            },
+            update: {
+              title,
+              song: randomSong.name,
+              hashtags,
+              imageUrls,
+              scheduledFor: now,
+              status: 'POSTED',
+              tiktokPublishId: publishId,
+              tiktokStatus: 'PUBLISHED',
+              updatedAt: now,
+            },
+            create: {
               userId: schedule.userId,
               title,
               song: randomSong.name,
@@ -154,9 +186,22 @@ export async function GET(request: NextRequest) {
           error.response?.data || error.message
         );
 
-        // Log the failed post in the database
-        await prisma.scheduledPost.create({
-          data: {
+        // Upsert the failed post record (replace previous one)
+        await prisma.scheduledPost.upsert({
+          where: {
+            userId: schedule.userId,
+          },
+          update: {
+            title: 'Failed to generate',
+            song: 'Unknown',
+            hashtags: '',
+            imageUrls: [],
+            scheduledFor: now,
+            status: 'FAILED',
+            tiktokError: error.response?.data?.error?.message || error.message,
+            updatedAt: now,
+          },
+          create: {
             userId: schedule.userId,
             title: 'Failed to generate',
             song: 'Unknown',
