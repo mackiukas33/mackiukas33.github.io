@@ -51,7 +51,22 @@ export async function GET(request: NextRequest) {
           '@/lib/utils'
         );
 
-        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        // Get the last post to avoid duplicate songs
+        const lastPost = await prisma.scheduledPost.findUnique({
+          where: { userId: schedule.userId },
+        });
+
+        // Avoid using the same song as the last post
+        let availableSongs = songs;
+        if (lastPost && lastPost.song) {
+          availableSongs = songs.filter((song) => song.name !== lastPost.song);
+          if (availableSongs.length === 0) {
+            availableSongs = songs; // Fallback to all songs
+          }
+        }
+
+        const randomSong =
+          availableSongs[Math.floor(Math.random() * availableSongs.length)];
         const photoFiles = getRandomPhotoFiles();
         const imageUrls = generateImageUrls(
           process.env.NEXT_PUBLIC_BASE_URL || 'https://ttphotos.online',
