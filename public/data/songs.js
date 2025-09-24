@@ -36,11 +36,40 @@ export const songs = [
   thats how you do.
   
   Gifts and all designers 
-  if you wanted these - that’s for you 
+  if you wanted these - that's for you 
   When you ready - come 
   ama set a table just for two.
   Miss the time we spent 
   right under the moon.
   Just me and you, me and you`,
+  },
+  {
+    id: 'MUSIC_ID_4',
+    name: 'Poley More - JASMINE.',
+    lyrics: `I'm taking my time now
+  Slow down when it's getting loud
+  Counting my days till you come around 
+
+  Caught beneath stars, thousands
+  Counting the scars, I'm bound in
+  Missing your voice
+  Wishing your voice would ground me
+
+  I'm caught beneath stars in thousands
+  Wishing you'd show the way
+  Feel like it's all too late`,
+  },
+  {
+    id: 'MUSIC_ID_5',
+    name: 'prod.push, Poley More - Signs u knew',
+    lyrics: `Things around we 
+  Hoping I stopped  your heart bleed
+  Hoping it's hope that I bring 
+  All of the stuff that we did 
+
+  Telling all your thoughts by noon
+  I won't cut u off but it's the truth
+  Had some things, didn't wanna tell u that
+  Bought u some things, u gets to show it off`,
   },
 ];

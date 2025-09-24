@@ -1,6 +1,72 @@
-// Trending music and song-related hashtags
+// Love songs, R&B, and Hip-Hop focused hashtags
 export const trendingMusicHashtags = [
-  // General music
+  // Love & Romance
+  '#lovesong',
+  '#romance',
+  '#love',
+  '#heartbreak',
+  '#relationship',
+  '#couple',
+  '#valentine',
+  '#romantic',
+  '#emotional',
+  '#feelings',
+  '#heart',
+  '#soulmate',
+  '#forever',
+  '#together',
+  '#missingyou',
+  '#thinkingofyou',
+  '#loveyou',
+  '#myheart',
+  '#soulful',
+  '#passionate',
+
+  // R&B & Soul
+  '#rnb',
+  '#soul',
+  '#rnbmusic',
+  '#soulmusic',
+  '#rnbsoul',
+  '#rnbvibes',
+  '#soulful',
+  '#rnbartist',
+  '#rnbsinger',
+  '#rnbproducer',
+  '#rnbbeat',
+  '#rnblyrics',
+  '#rnbmood',
+  '#rnbfeels',
+  '#rnblove',
+  '#rnbheartbreak',
+  '#rnbromance',
+  '#rnbnight',
+  '#rnbvibes',
+  '#rnbflow',
+
+  // Hip-Hop & Rap
+  '#hiphop',
+  '#rap',
+  '#hiphopmusic',
+  '#rapmusic',
+  '#hiphopartist',
+  '#rapper',
+  '#hiphopbeat',
+  '#rapbeat',
+  '#hiphoplyrics',
+  '#raplyrics',
+  '#hiphopflow',
+  '#rapflow',
+  '#hiphopvibes',
+  '#rapvibes',
+  '#hiphopculture',
+  '#rapculture',
+  '#hiphoplife',
+  '#raplife',
+  '#hiphoplove',
+  '#raplove',
+
+  // General Music
   '#music',
   '#song',
   '#newmusic',
@@ -12,27 +78,7 @@ export const trendingMusicHashtags = [
   '#beatmaker',
   '#musicproducer',
 
-  // Genres
-  '#hiphop',
-  '#rap',
-  '#rnb',
-  '#pop',
-  '#rock',
-  '#indie',
-  '#alternative',
-  '#electronic',
-  '#edm',
-  '#trap',
-  '#drill',
-  '#afrobeats',
-  '#reggaeton',
-  '#country',
-  '#jazz',
-  '#blues',
-  '#funk',
-  '#soul',
-
-  // Music discovery
+  // Music Discovery
   '#underground',
   '#indieartist',
   '#newartist',
@@ -44,11 +90,9 @@ export const trendingMusicHashtags = [
   '#selfproduced',
   '#homemade',
 
-  // Music creation
+  // Music Creation
   '#studio',
   '#recording',
-  '#mixing',
-  '#mastering',
   '#songwriting',
   '#lyrics',
   '#melody',
@@ -57,16 +101,6 @@ export const trendingMusicHashtags = [
   '#acoustic',
   '#live',
   '#performance',
-
-  // Music sharing
-  '#musicvideo',
-  '#mv',
-  '#visualizer',
-  '#lyricvideo',
-  '#behindthescenes',
-  '#studio',
-  '#recording',
-  '#musicproduction',
 
   // Engagement
   '#fyp',
@@ -80,17 +114,7 @@ export const trendingMusicHashtags = [
   '#musiclovers',
   '#musicislife',
 
-  // Specific to your style
-  '#underrated',
-  '#hidden',
-  '#gem',
-  '#diamond',
-  '#rare',
-  '#exclusive',
-  '#fresh',
-  '#fire',
-  '#heat',
-  '#banger',
+  // Mood & Vibes
   '#vibe',
   '#mood',
   '#feels',
@@ -101,6 +125,16 @@ export const trendingMusicHashtags = [
   '#raw',
   '#honest',
   '#storytelling',
+  '#underrated',
+  '#hidden',
+  '#gem',
+  '#diamond',
+  '#rare',
+  '#exclusive',
+  '#fresh',
+  '#fire',
+  '#heat',
+  '#banger',
 ];
 
 // Function to get random hashtags
