@@ -50,10 +50,10 @@ async function refreshTokenIfNeeded(user: any, prisma: any) {
 
       console.log(`✅ Token refreshed for user ${user.id}`);
       return tokenRes.data.access_token;
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         `❌ Token refresh failed for user ${user.id}:`,
-        error.response?.data || error.message
+        error?.response?.data || error.message
       );
       return null;
     }
