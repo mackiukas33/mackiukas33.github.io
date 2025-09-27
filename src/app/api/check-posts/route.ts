@@ -5,6 +5,61 @@ import { songs } from '@/lib/data/songs';
 import { getRandomTitle, getRandomHashtags } from '@/lib/data/hashtags';
 import { getRandomPhotoFiles, generateImageUrls } from '@/lib/utils';
 import axios from 'axios';
+import qs from 'qs';
+
+// Token refresh function
+async function refreshTokenIfNeeded(user: any, prisma: any) {
+  const now = Date.now();
+  const oneHourFromNow = now + 60 * 60 * 1000;
+
+  // Check if token expires within 1 hour
+  if (
+    user.tiktokTokenExpires &&
+    user.tiktokTokenExpires.getTime() <= oneHourFromNow
+  ) {
+    try {
+      console.log(`🔄 Refreshing token for user ${user.id}`);
+
+      // Refresh the token using TikTok API
+      const tokenRes = await axios.post(
+        'https://open.tiktokapis.com/v2/oauth/token/',
+        qs.stringify({
+          client_key: process.env.TIKTOK_CLIENT_KEY,
+          client_secret: process.env.TIKTOK_CLIENT_SECRET,
+          grant_type: 'refresh_token',
+          refresh_token: user.tiktokRefreshToken,
+        }),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        }
+      );
+
+      // Update user with new tokens
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          tiktokAccessToken: tokenRes.data.access_token,
+          tiktokRefreshToken:
+            tokenRes.data.refresh_token || user.tiktokRefreshToken,
+          tiktokTokenExpires: new Date(
+            Date.now() + (tokenRes.data.expires_in || 86400) * 1000
+          ),
+        },
+      });
+
+      console.log(`✅ Token refreshed for user ${user.id}`);
+      return tokenRes.data.access_token;
+    } catch (error: any) {
+      console.error(
+        `❌ Token refresh failed for user ${user.id}:`,
+        error.response?.data || error.message
+      );
+      return null;
+    }
+  }
+
+  return user.tiktokAccessToken;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,6 +129,22 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        // 🔥 Refresh token if needed before posting
+        const validToken = await refreshTokenIfNeeded(schedule.user, prisma);
+        if (!validToken) {
+          console.log(
+            `⚠️ No valid token for user ${schedule.userId}, skipping post`
+          );
+          results.push({
+            userId: schedule.userId,
+            status: 'failed',
+            error: 'No valid token available',
+            title: 'Failed to generate',
+            postedAt: now.toISOString(),
+          });
+          continue;
+        }
+
         // Generate fresh content for this post
         // Avoid using the same song as the last post
         let availableSongs = songs;
@@ -120,13 +191,13 @@ export async function GET(request: NextRequest) {
         console.log('Posting carousel to TikTok API...');
         console.log('Carousel payload:', JSON.stringify(payload, null, 2));
 
-        // Post to TikTok using the correct carousel endpoint
+        // Post to TikTok using the refreshed token
         const response = await axios.post(
           'https://open.tiktokapis.com/v2/post/publish/content/init/',
           payload,
           {
             headers: {
-              Authorization: `Bearer ${schedule.user.tiktokAccessToken}`,
+              Authorization: `Bearer ${validToken}`,
               'Content-Type': 'application/json; charset=UTF-8',
             },
           }
@@ -185,6 +256,28 @@ export async function GET(request: NextRequest) {
           `Failed to post for user ${schedule.userId} at ${currentTime}:`,
           error.response?.data || error.message
         );
+
+        // Check if this is a 401 error (token expired/invalid)
+        if (error.response?.status === 401) {
+          console.log(
+            `🔑 401 error detected for user ${schedule.userId}, attempting token refresh...`
+          );
+
+          // Try to refresh the token one more time
+          const refreshedToken = await refreshTokenIfNeeded(
+            schedule.user,
+            prisma
+          );
+          if (refreshedToken) {
+            console.log(
+              `🔄 Token refreshed successfully for user ${schedule.userId}, but post already failed`
+            );
+          } else {
+            console.log(
+              `❌ Token refresh failed for user ${schedule.userId}, schedule may need manual intervention`
+            );
+          }
+        }
 
         // Upsert the failed post record (replace previous one)
         await prisma.scheduledPost.upsert({
