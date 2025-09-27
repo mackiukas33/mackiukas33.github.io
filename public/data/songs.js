@@ -72,4 +72,20 @@ export const songs = [
   Had some things, didn't wanna tell u that
   Bought u some things, u gets to show it off`,
   },
+  {
+    id: 'MUSIC_ID_6',
+    name: 'prod.push, Poley More - I Know',
+    lyrics: `Many things I heard a billion times 
+They said love don’t last for while (uuuh)
+…
+I know 
+Open hearts always heals fast 
+I know 
+Get your bag and always watch you backs yeah I know 
+And all this love is fading on the grass, 
+yeah I know
+I know (uuh) 
+
+`,
+  },
 ];
