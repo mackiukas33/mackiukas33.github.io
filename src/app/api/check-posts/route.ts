@@ -129,22 +129,6 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        // 🔥 Refresh token if needed before posting
-        const validToken = await refreshTokenIfNeeded(schedule.user, prisma);
-        if (!validToken) {
-          console.log(
-            `⚠️ No valid token for user ${schedule.userId}, skipping post`
-          );
-          results.push({
-            userId: schedule.userId,
-            status: 'failed',
-            error: 'No valid token available',
-            title: 'Failed to generate',
-            postedAt: now.toISOString(),
-          });
-          continue;
-        }
-
         // Generate fresh content for this post
         // Avoid using the same song as the last post
         let availableSongs = songs;
@@ -191,13 +175,13 @@ export async function GET(request: NextRequest) {
         console.log('Posting carousel to TikTok API...');
         console.log('Carousel payload:', JSON.stringify(payload, null, 2));
 
-        // Post to TikTok using the refreshed token
+        // Post to TikTok using the original token
         const response = await axios.post(
           'https://open.tiktokapis.com/v2/post/publish/content/init/',
           payload,
           {
             headers: {
-              Authorization: `Bearer ${validToken}`,
+              Authorization: `Bearer ${schedule.user.tiktokAccessToken}`,
               'Content-Type': 'application/json; charset=UTF-8',
             },
           }
