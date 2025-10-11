@@ -1,6 +1,72 @@
-// Trending music and song-related hashtags
+// Love songs, R&B, and Hip-Hop focused hashtags
 export const trendingMusicHashtags = [
-  // General music
+  // Love & Romance
+  '#lovesong',
+  '#romance',
+  '#love',
+  '#heartbreak',
+  '#relationship',
+  '#couple',
+  '#valentine',
+  '#romantic',
+  '#emotional',
+  '#feelings',
+  '#heart',
+  '#soulmate',
+  '#forever',
+  '#together',
+  '#missingyou',
+  '#thinkingofyou',
+  '#loveyou',
+  '#myheart',
+  '#soulful',
+  '#passionate',
+
+  // R&B & Soul
+  '#rnb',
+  '#soul',
+  '#rnbmusic',
+  '#soulmusic',
+  '#rnbsoul',
+  '#rnbvibes',
+  '#soulful',
+  '#rnbartist',
+  '#rnbsinger',
+  '#rnbproducer',
+  '#rnbbeat',
+  '#rnblyrics',
+  '#rnbmood',
+  '#rnbfeels',
+  '#rnblove',
+  '#rnbheartbreak',
+  '#rnbromance',
+  '#rnbnight',
+  '#rnbvibes',
+  '#rnbflow',
+
+  // Hip-Hop & Rap
+  '#hiphop',
+  '#rap',
+  '#hiphopmusic',
+  '#rapmusic',
+  '#hiphopartist',
+  '#rapper',
+  '#hiphopbeat',
+  '#rapbeat',
+  '#hiphoplyrics',
+  '#raplyrics',
+  '#hiphopflow',
+  '#rapflow',
+  '#hiphopvibes',
+  '#rapvibes',
+  '#hiphopculture',
+  '#rapculture',
+  '#hiphoplife',
+  '#raplife',
+  '#hiphoplove',
+  '#raplove',
+
+  // General Music
   '#music',
   '#song',
   '#newmusic',
@@ -12,27 +78,7 @@ export const trendingMusicHashtags = [
   '#beatmaker',
   '#musicproducer',
 
-  // Genres
-  '#hiphop',
-  '#rap',
-  '#rnb',
-  '#pop',
-  '#rock',
-  '#indie',
-  '#alternative',
-  '#electronic',
-  '#edm',
-  '#trap',
-  '#drill',
-  '#afrobeats',
-  '#reggaeton',
-  '#country',
-  '#jazz',
-  '#blues',
-  '#funk',
-  '#soul',
-
-  // Music discovery
+  // Music Discovery
   '#underground',
   '#indieartist',
   '#newartist',
@@ -44,11 +90,9 @@ export const trendingMusicHashtags = [
   '#selfproduced',
   '#homemade',
 
-  // Music creation
+  // Music Creation
   '#studio',
   '#recording',
-  '#mixing',
-  '#mastering',
   '#songwriting',
   '#lyrics',
   '#melody',
@@ -57,16 +101,6 @@ export const trendingMusicHashtags = [
   '#acoustic',
   '#live',
   '#performance',
-
-  // Music sharing
-  '#musicvideo',
-  '#mv',
-  '#visualizer',
-  '#lyricvideo',
-  '#behindthescenes',
-  '#studio',
-  '#recording',
-  '#musicproduction',
 
   // Engagement
   '#fyp',
@@ -80,17 +114,7 @@ export const trendingMusicHashtags = [
   '#musiclovers',
   '#musicislife',
 
-  // Specific to your style
-  '#underrated',
-  '#hidden',
-  '#gem',
-  '#diamond',
-  '#rare',
-  '#exclusive',
-  '#fresh',
-  '#fire',
-  '#heat',
-  '#banger',
+  // Mood & Vibes
   '#vibe',
   '#mood',
   '#feels',
@@ -101,24 +125,48 @@ export const trendingMusicHashtags = [
   '#raw',
   '#honest',
   '#storytelling',
+  '#underrated',
+  '#hidden',
+  '#gem',
+  '#diamond',
+  '#rare',
+  '#exclusive',
+  '#fresh',
+  '#fire',
+  '#heat',
+  '#banger',
 ];
 
 // Function to get random hashtags
-export function getRandomHashtags(count = 5): string[] {
-  const shuffled = [...trendingMusicHashtags].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+export function getRandomHashtags(count = 5) {
+  // Always include these two hashtags
+  const fixedHashtags = ['#rnbvibes', '#playlist'];
+
+  // Get remaining count from the pool (excluding the fixed ones)
+  const remainingCount = count - fixedHashtags.length;
+  const availableHashtags = trendingMusicHashtags.filter(
+    (tag) => !fixedHashtags.includes(tag)
+  );
+
+  // Shuffle and select remaining hashtags
+  const shuffled = [...availableHashtags].sort(() => 0.5 - Math.random());
+  const randomHashtags = shuffled.slice(0, remainingCount);
+
+  // Combine fixed and random hashtags, then shuffle the order
+  const allHashtags = [...fixedHashtags, ...randomHashtags];
+  return allHashtags.sort(() => 0.5 - Math.random());
 }
 
 // Function to get hashtags by category
-export function getHashtagsByCategory(category: string): string[] {
-  const categories: Record<string, string[]> = {
+export function getHashtagsByCategory(category: string) {
+  const categories = {
     general: ['#music', '#song', '#newmusic', '#musiclover', '#artist'],
     genres: ['#hiphop', '#rap', '#rnb', '#pop', '#indie'],
     discovery: ['#underground', '#indieartist', '#newartist', '#originalmusic'],
     creation: ['#studio', '#recording', '#songwriting', '#lyrics', '#beat'],
     engagement: ['#fyp', '#viral', '#musicdiscovery', '#supportlocal'],
   };
-  return categories[category] || [];
+  return categories[category as keyof typeof categories] || [];
 }
 
 // Catchy post titles
@@ -156,6 +204,6 @@ export const catchyTitles = [
 ];
 
 // Function to get random catchy title
-export function getRandomTitle(): string {
+export function getRandomTitle() {
   return catchyTitles[Math.floor(Math.random() * catchyTitles.length)];
 }
